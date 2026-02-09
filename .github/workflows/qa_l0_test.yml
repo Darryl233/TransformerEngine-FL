@@ -56,6 +56,8 @@ jobs:
           TE_WITH_NCCL: 1
         run: |
           echo "Install transformer_engine"
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           pip install transformers expecttest
           pip install --no-build-isolation -vvv . --no-deps
 
@@ -73,6 +75,8 @@ jobs:
         env:
           TE_PATH: .
         run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
           TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
           export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
@@ -92,6 +96,8 @@ jobs:
           CPP_ONLY: 1
           TE_PATH: .
         run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           bash ./qa/L0_pytorch_lint/test.sh || true
 
           echo ""
@@ -106,6 +112,8 @@ jobs:
           PYTHON_ONLY: 1
           TE_PATH: .
         run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           bash ./qa/L0_pytorch_lint/test.sh || true
 
           echo ""
@@ -128,6 +136,8 @@ jobs:
           done
 
           cat ./qa/L0_pytorch_debug_unittest/test.sh
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
 
           bash ./qa/L0_pytorch_debug_unittest/test.sh
 
@@ -147,5 +157,7 @@ jobs:
           done
 
           cat ./qa/L0_pytorch_unittest/test.sh
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
 
           bash ./qa/L0_pytorch_unittest/test.sh
