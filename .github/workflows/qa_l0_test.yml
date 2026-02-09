@@ -1,0 +1,151 @@
+name: QA L0 Tests
+
+on:
+  push:
+    branches:
+      - test-ye
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.actor }}
+  cancel-in-progress: true
+
+jobs:
+  qa-l0-test:
+    runs-on: [ self-hosted, TE_FL ]
+    defaults:
+      run:
+        shell: bash
+    container:
+      image: localhost:5000/flagscale-cuda12.8.1-torch2.7.1-python3.10-te2.9:20260209
+      ports:
+        - 80:80
+      options: >-
+        --gpus all 
+        --shm-size=500g 
+        --privileged 
+        --ipc=host 
+        --ulimit memlock=-1 
+        --ulimit stack=67108864 
+        --ulimit nofile=65535:65535 
+        --user root
+        --pull always
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.1
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          ssh-strict: true
+          ssh-user: git
+          persist-credentials: true
+          clean: true
+          sparse-checkout-cone-mode: true
+          fetch-tags: false
+          show-progress: true
+          lfs: false
+          submodules: recursive
+          set-safe-directory: true
+
+      - name: Install dependencies and build transformer_engine
+        # timeout-minutes: 30
+        env:
+          NVTE_FRAMEWORK: pytorch
+          TE_WITH_NCCL: 1
+        run: |
+          echo "Install transformer_engine"
+          pip install transformers expecttest
+          pip install --no-build-isolation -vvv . --no-deps
+
+          # Verify installation
+          python3 tests/pytorch/test_sanity_import.py
+
+      - name: GPU Usage Check / Verification
+        run: |
+          source .github/workflows/scripts/gpu_check.sh
+          wait_for_gpu
+
+      - name: L0 CPP Unittest
+        id: L0_cppunittest
+        # timeout-minutes: 80
+        env:
+          TE_PATH: .
+        run: |
+          TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
+          TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
+          export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
+          export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
+          NUM_PHYSICAL_CORES=$(nproc)
+          NUM_PARALLEL_JOBS=4
+
+          cd $TE_PATH/tests/cpp
+          cmake -GNinja -Bbuild . -DTE_LIB_PATH="${TE_CPP_LIB_PATH}"
+          cmake --build build
+          export OMP_NUM_THREADS=$((NUM_PHYSICAL_CORES / NUM_PARALLEL_JOBS))
+          ctest --test-dir build -j$NUM_PARALLEL_JOBS
+
+      - name: PyTorch C++ Lint
+        id: pytorch_cpplint
+        env:
+          CPP_ONLY: 1
+          TE_PATH: .
+        run: |
+          bash ./qa/L0_pytorch_lint/test.sh || true
+
+          echo ""
+          echo "-----------------------------------------------------"
+          echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
+          echo "-----------------------------------------------------"
+        continue-on-error: true
+
+      - name: PyTorch Python Lint
+        id: pytorch_pylint
+        env:
+          PYTHON_ONLY: 1
+          TE_PATH: .
+        run: |
+          bash ./qa/L0_pytorch_lint/test.sh || true
+
+          echo ""
+          echo "-----------------------------------------------------"
+          echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
+          echo "-----------------------------------------------------"
+
+      - name: L0 Pytorch Debug Unittest
+        id: L0_pytorch_debug_unittest
+        continue-on-error: true
+        # timeout-minutes: 10
+        env:
+          TE_PATH: .
+        run: |
+          ignore_files=("tests/pytorch/debug/test_api_features.py" "tests/pytorch/test_numerics.py")
+
+          for file in "${ignore_files[@]}"; do
+              escaped_file=$(echo "$file" | sed 's/\//\\\//g')
+              sed -i "s/^.*\($escaped_file\).*$/#&/" ./qa/L0_pytorch_debug_unittest/test.sh
+          done
+
+          cat ./qa/L0_pytorch_debug_unittest/test.sh
+
+          bash ./qa/L0_pytorch_debug_unittest/test.sh
+
+      - name: L0 Pytorch Unittest
+        id: L0_pytorch_unittest
+        # timeout-minutes: 20
+        env:
+          TE_PATH: .
+        run: |
+          ignore_files=("tests/pytorch/test_numerics.py" "tests/pytorch/test_permutation.py" 
+              "tests/pytorch/attention/test_attention.py" "tests/pytorch/test_checkpoint.py"
+          )
+
+          for file in "${ignore_files[@]}"; do
+              escaped_file=$(echo "$file" | sed 's/\//\\\//g')              
+              sed -i "s/^.*\($escaped_file\).*$/#&/" ./qa/L0_pytorch_unittest/test.sh
+          done
+
+          cat ./qa/L0_pytorch_unittest/test.sh
+
+          bash ./qa/L0_pytorch_unittest/test.sh
