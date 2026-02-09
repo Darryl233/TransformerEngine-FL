@@ -55,6 +55,8 @@ jobs:
           NVTE_FRAMEWORK: pytorch
           TE_WITH_NCCL: 1
         run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           # Install MPI
           apt update
           apt install -y libopenmpi-dev openmpi-bin openmpi-common
@@ -96,6 +98,9 @@ jobs:
           TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
           export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
           export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
+          
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
 
           bash ./qa/L1_cpp_distributed/test.sh
       
@@ -104,7 +109,10 @@ jobs:
         env:
           XML_LOG_DIR: "/logs/pytorch/thunder"
           THUNDER_PATH: "lightning-thunder"
-        run: bash ./qa/L1_pytorch_thunder_integration/test.sh
+        run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
+          bash ./qa/L1_pytorch_thunder_integration/test.sh
 
       - name: L1 Pytorch Distributed Unittest
         id: L1_pytorch_distributed_unittest
@@ -125,6 +133,9 @@ jobs:
 
           cat ./qa/L1_pytorch_distributed_unittest/test.sh
 
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
+
           bash ./qa/L1_pytorch_distributed_unittest/test.sh
 
       - name: L1 Pytorch Onnx Unittest
@@ -133,6 +144,8 @@ jobs:
           XML_LOG_DIR: "/logs/pytorch/onnx"
           TE_PATH: .
         run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           # Test items that need to be skipped
           SKIP_TESTS=( 
             "test_trt_integration[None]"
