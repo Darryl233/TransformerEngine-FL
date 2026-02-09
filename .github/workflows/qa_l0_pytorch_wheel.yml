@@ -62,6 +62,8 @@ jobs:
           sed -i '44 s/^cd \s*\$TE_PATH\s*$/popd/' qa/L0_pytorch_wheel/test.sh
 
           cat qa/L0_pytorch_wheel/test.sh
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
           pip uninstall -y transformer_engine
 
           bash qa/L0_pytorch_wheel/test.sh | tee ${RUN_LOG}/pytorch_wheel-${{ github.run_id }}.log
