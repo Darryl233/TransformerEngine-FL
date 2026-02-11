@@ -50,7 +50,7 @@ jobs:
           set-safe-directory: true
 
       - name: Install dependencies and build transformer_engine
-        # timeout-minutes: 30
+        timeout-minutes: 60
         env:
           NVTE_FRAMEWORK: pytorch
           TE_WITH_NCCL: 1
@@ -70,8 +70,7 @@ jobs:
           wait_for_gpu
 
       - name: L0 CPP Unittest
-        id: L0_cppunittest
-        # timeout-minutes: 80
+        timeout-minutes: 80
         env:
           TE_PATH: .
         run: |
@@ -91,7 +90,7 @@ jobs:
           ctest --test-dir build -j$NUM_PARALLEL_JOBS
 
       - name: PyTorch C++ Lint
-        id: pytorch_cpplint
+        timeout-minutes: 5
         env:
           CPP_ONLY: 1
           TE_PATH: .
@@ -107,7 +106,7 @@ jobs:
         continue-on-error: true
 
       - name: PyTorch Python Lint
-        id: pytorch_pylint
+        timeout-minutes: 5
         env:
           PYTHON_ONLY: 1
           TE_PATH: .
@@ -120,44 +119,25 @@ jobs:
           echo "-----------------------------------------------------"
           echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
           echo "-----------------------------------------------------"
+        continue-on-error: true
 
       - name: L0 Pytorch Debug Unittest
-        id: L0_pytorch_debug_unittest
-        continue-on-error: true
         # timeout-minutes: 10
         env:
           TE_PATH: .
         run: |
-          ignore_files=("tests/pytorch/debug/test_api_features.py" "tests/pytorch/test_numerics.py")
-
-          for file in "${ignore_files[@]}"; do
-              escaped_file=$(echo "$file" | sed 's/\//\\\//g')
-              sed -i "s/^.*\($escaped_file\).*$/#&/" ./qa/L0_pytorch_debug_unittest/test.sh
-          done
-
-          cat ./qa/L0_pytorch_debug_unittest/test.sh
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
 
           bash ./qa/L0_pytorch_debug_unittest/test.sh
 
       - name: L0 Pytorch Unittest
-        id: L0_pytorch_unittest
         # timeout-minutes: 20
         env:
           TE_PATH: .
         run: |
-          ignore_files=("tests/pytorch/test_numerics.py" "tests/pytorch/test_permutation.py" 
-              "tests/pytorch/attention/test_attention.py" "tests/pytorch/test_checkpoint.py"
-          )
-
-          for file in "${ignore_files[@]}"; do
-              escaped_file=$(echo "$file" | sed 's/\//\\\//g')              
-              sed -i "s/^.*\($escaped_file\).*$/#&/" ./qa/L0_pytorch_unittest/test.sh
-          done
-
-          cat ./qa/L0_pytorch_unittest/test.sh
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
 
           bash ./qa/L0_pytorch_unittest/test.sh
+

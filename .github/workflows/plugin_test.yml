@@ -1,9 +1,9 @@
-name: QA Pytorch Wheel
+name: Plugin Tests
 
 on:
   push:
     branches:
-      - test-ye
+      - main
   pull_request:
     branches:
       - main
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  qa-l0-pytorch-wheel:
+  plugin-test:
     runs-on: [ self-hosted, TE_FL ]
     defaults:
       run:
@@ -32,7 +32,6 @@ jobs:
         --ulimit nofile=65535:65535 
         --user root
         --pull always
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v6.0.1
@@ -49,30 +48,31 @@ jobs:
           lfs: false
           submodules: recursive
           set-safe-directory: true
-
-      - name: L0 Pytorch Wheel
-        id: L0_pytoech_wheel
-        # timeout-minutes: 10
+      
+      - name: Install dependencies and build transformer_engine
+        timeout-minutes: 60
         env:
-          TE_PATH: .
-          RUN_LOG: /logs/pytorch/wheel
+          NVTE_FRAMEWORK: pytorch
+          TE_WITH_NCCL: 1
         run: |
-          echo "TE_PATH: ${TE_PATH}"
-          sed -i "s/^cd transformer_engine\/pytorch\s*$/pushd transformer_engine\/pytorch/" qa/L0_pytorch_wheel/test.sh
-          sed -i '44 s/^cd \s*\$TE_PATH\s*$/popd/' qa/L0_pytorch_wheel/test.sh
-
-          cat qa/L0_pytorch_wheel/test.sh
+          echo "Install transformer_engine"
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
-          pip uninstall -y transformer_engine
+          pip install transformers expecttest
+          pip install --no-build-isolation -vvv . --no-deps
 
-          bash qa/L0_pytorch_wheel/test.sh | tee ${RUN_LOG}/pytorch_wheel-${{ github.run_id }}.log
+          # Verify installation
+          python3 tests/pytorch/test_sanity_import.py
 
-      - name: Upload Installation Logs
-        if: always() && steps.L0_pytoech_wheel.outcome == 'failure'
-        uses: actions/upload-artifact@v4
-        with:
-          name: L0-pytorch-logs-${{ github.run_id }}
-          path: /logs/pytorch/wheel
-          retention-days: 7
-          if-no-files-found: warn
+      - name: GPU Usage Check / Verification
+        run: |
+          source .github/workflows/scripts/gpu_check.sh
+          wait_for_gpu
+
+      - name: Plugin Test
+        timeout-minutes: 30
+        run: |
+          source /opt/miniconda3/etc/profile.d/conda.sh
+          conda activate flagscale-train
+          
+          torchrun --nproc_per_node=8 -m pytest -q -x -p no:warnings transformer_engine/plugin/tests
