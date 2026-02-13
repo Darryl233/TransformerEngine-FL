@@ -3,7 +3,7 @@ name: QA L0 Tests
 on:
   push:
     branches:
-      - test-ye
+      - main
   pull_request:
     branches:
       - main

@@ -3,7 +3,7 @@ name: Plugin Tests
 on:
   push:
     branches:
-      - test-ye
+      - main
   pull_request:
     branches:
       - main

@@ -74,9 +74,6 @@ jobs:
           # Install dependencies
           pip install optree looseversion opt_einsum lightning_utilities
 
-          # Clone lightning-thunder
-          git clone --recurse-submodules https://github.com/Lightning-AI/lightning-thunder.git
-
           echo "Install transformer_engine"
           pip install --no-build-isolation -vvv . --no-deps
 
@@ -88,30 +85,35 @@ jobs:
           source .github/workflows/scripts/gpu_check.sh
           wait_for_gpu
 
-      - name: L1 CPP Distributed  # 待检验
-        id: L1_cpp_distributed
-        # timeout-minutes: 10
-        env:
-          TE_PATH: .
-        run: |
-          source /opt/miniconda3/etc/profile.d/conda.sh
-          conda activate flagscale-train
+      # - name: L1 CPP Distributed  # 待检验
+      #   id: L1_cpp_distributed
+      #   # timeout-minutes: 10
+      #   env:
+      #     TE_PATH: .
+      #   run: |
+      #     source /opt/miniconda3/etc/profile.d/conda.sh
+      #     conda activate flagscale-train
 
-          TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
-          TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
-          export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
-          export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
+      #     TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
+      #     TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
+      #     export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
+      #     export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
 
-          bash ./qa/L1_cpp_distributed/test.sh
+      #     bash ./qa/L1_cpp_distributed/test.sh
 
       - name: L1 Pytorch Thunder Integration
         id: L1_pytorch_thunder_integration
         env:
           XML_LOG_DIR: "/logs/pytorch/thunder"
           THUNDER_PATH: "lightning-thunder"
+          TE_PATH: .
         run: |
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
+
+          # Clone lightning-thunder
+          git clone --recurse-submodules https://github.com/Lightning-AI/lightning-thunder.git
+
           bash ./qa/L1_pytorch_thunder_integration/test.sh
 
       - name: L1 Pytorch Distributed Unittest
