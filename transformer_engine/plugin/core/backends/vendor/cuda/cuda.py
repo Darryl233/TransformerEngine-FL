@@ -8,6 +8,7 @@ import torch
 
 from ....ops import TEFLBackendBase, FP8TensorMeta
 
+
 def _load_cuda_libs():
     import ctypes
     import os
@@ -48,7 +49,7 @@ def _load_cuda_libs():
 
         try:
             result = subprocess.check_output(f"ldconfig -p | grep 'lib{name}{ext}'", shell=True)
-            for line in result.decode().split('\n'):
+            for line in result.decode().split("\n"):
                 if f"lib{name}" in line and "=>" in line:
                     so_path = line.split(">")[1].strip()
                     if so_path:
@@ -78,7 +79,9 @@ def _load_cuda_libs():
         print(f"[CUDA] Failed to load CUDA libs: {e}")
         return False
 
+
 _cuda_libs_loaded = False
+
 
 def _ensure_cuda_libs():
     global _cuda_libs_loaded
@@ -86,13 +89,16 @@ def _ensure_cuda_libs():
         _cuda_libs_loaded = _load_cuda_libs()
     return _cuda_libs_loaded
 
+
 def _check_cuda_available() -> bool:
     if not torch.cuda.is_available():
         return False
 
     import os
+
     try:
         from ...._build_config import SKIP_CUDA_BUILD
+
         if SKIP_CUDA_BUILD:
             print("[CUDA] Disabled: CUDA was skipped at build time")
             return False
@@ -105,26 +111,34 @@ def _check_cuda_available() -> bool:
         if not _ensure_cuda_libs():
             return False
         import transformer_engine_torch_nv
+
         return True
     except (ImportError, OSError) as e:
         print(f"[CUDA] Import failed: {e}")
         return False
 
+
 def _get_tex():
     _ensure_cuda_libs()
     import transformer_engine_torch_nv
+
     return transformer_engine_torch_nv
+
 
 def _torch_dtype_to_te_dtype(torch_dtype, tex_module):
     if torch_dtype is None:
         return None
 
     NativeDType = tex_module.DType
-    if type(torch_dtype).__name__ == 'DType' and type(torch_dtype).__module__ == 'transformer_engine_torch_nv':
+    if (
+        type(torch_dtype).__name__ == "DType"
+        and type(torch_dtype).__module__ == "transformer_engine_torch_nv"
+    ):
         return torch_dtype
 
-    if hasattr(torch_dtype, 'name') and hasattr(torch_dtype, 'value'):
+    if hasattr(torch_dtype, "name") and hasattr(torch_dtype, "value"):
         from transformer_engine.plugin.core.ops import DType as PyDType
+
         if isinstance(torch_dtype, PyDType):
             dtype_name = torch_dtype.name
             if hasattr(NativeDType, dtype_name):
@@ -138,12 +152,13 @@ def _torch_dtype_to_te_dtype(torch_dtype, tex_module):
         torch.uint8: NativeDType.kByte,
     }
 
-    if hasattr(torch, 'float8_e4m3fn'):
+    if hasattr(torch, "float8_e4m3fn"):
         dtype_map[torch.float8_e4m3fn] = NativeDType.kFloat8E4M3
-    if hasattr(torch, 'float8_e5m2'):
+    if hasattr(torch, "float8_e5m2"):
         dtype_map[torch.float8_e5m2] = NativeDType.kFloat8E5M2
 
     return dtype_map.get(torch_dtype, torch_dtype)
+
 
 def _convert_dtype_params(func):
     import functools
@@ -152,7 +167,7 @@ def _convert_dtype_params(func):
 
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        dtype_params = ['otype', 'output_dtype', 'bias_type']
+        dtype_params = ["otype", "output_dtype", "bias_type"]
 
         from transformer_engine.plugin.core.ops import DType as PyDType
 
@@ -179,6 +194,7 @@ def _convert_dtype_params(func):
 
     return wrapper
 
+
 class CUDABackend(TEFLBackendBase):
     @staticmethod
     def check_available() -> bool:
@@ -200,6 +216,7 @@ class CUDABackend(TEFLBackendBase):
 
     def get_flash_attention_class(self):
         from .flash_attention import FlashAttentionCUDA
+
         return FlashAttentionCUDA
 
     def get_attention_backend(self, attention_params=None):
@@ -212,6 +229,7 @@ class CUDABackend(TEFLBackendBase):
         """
         # Import the original get_attention_backend function
         from transformer_engine.pytorch.attention.dot_product_attention import utils as dpa_utils
+
         return dpa_utils._original_get_attention_backend(attention_params)
 
     def quantize(
@@ -273,10 +291,28 @@ class CUDABackend(TEFLBackendBase):
             bias_type = self._to_te_dtype(torch.bfloat16)
 
         return tex.generic_gemm(
-            A, transA, B, transB, D, quantizer, output_dtype,
-            bias, bias_type, gelu, gelu_in, grad, workspace, workspace_size,
-            accumulate, use_split_accumulator, comm_overlap, comm_type,
-            extra_output, bulk_overlap, alpha, beta
+            A,
+            transA,
+            B,
+            transB,
+            D,
+            quantizer,
+            output_dtype,
+            bias,
+            bias_type,
+            gelu,
+            gelu_in,
+            grad,
+            workspace,
+            workspace_size,
+            accumulate,
+            use_split_accumulator,
+            comm_overlap,
+            comm_type,
+            extra_output,
+            bulk_overlap,
+            alpha,
+            beta,
         )
 
     def te_general_grouped_gemm(self, *args, **kwargs) -> Any:
@@ -290,6 +326,7 @@ class CUDABackend(TEFLBackendBase):
     def geglu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.geglu(input, quantizer)
+
     def qgelu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.qgelu(input, quantizer)
@@ -297,6 +334,7 @@ class CUDABackend(TEFLBackendBase):
     def qgeglu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.qgeglu(input, quantizer)
+
     def relu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.relu(input, quantizer)
@@ -304,6 +342,7 @@ class CUDABackend(TEFLBackendBase):
     def reglu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.reglu(input, quantizer)
+
     def srelu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.srelu(input, quantizer)
@@ -319,6 +358,7 @@ class CUDABackend(TEFLBackendBase):
     def swiglu(self, input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.swiglu(input, quantizer)
+
     def clamped_swiglu(
         self,
         input: torch.Tensor,
@@ -332,6 +372,7 @@ class CUDABackend(TEFLBackendBase):
     def dgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dgelu(grad, fwd_input, quantizer)
+
     def dgeglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dgeglu(grad, fwd_input, quantizer)
@@ -339,6 +380,7 @@ class CUDABackend(TEFLBackendBase):
     def dqgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dqgelu(grad, fwd_input, quantizer)
+
     def dqgeglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dqgeglu(grad, fwd_input, quantizer)
@@ -346,6 +388,7 @@ class CUDABackend(TEFLBackendBase):
     def drelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.drelu(grad, fwd_input, quantizer)
+
     def dreglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dreglu(grad, fwd_input, quantizer)
@@ -353,6 +396,7 @@ class CUDABackend(TEFLBackendBase):
     def dsrelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dsrelu(grad, fwd_input, quantizer)
+
     def dsreglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dsreglu(grad, fwd_input, quantizer)
@@ -360,6 +404,7 @@ class CUDABackend(TEFLBackendBase):
     def dsilu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dsilu(grad, fwd_input, quantizer)
+
     def dswiglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dswiglu(grad, fwd_input, quantizer)
@@ -375,23 +420,33 @@ class CUDABackend(TEFLBackendBase):
         tex = self._get_tex()
         return tex.clamped_dswiglu(grad, fwd_input, quantizer, limit, alpha)
 
-    def dbias_dgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dgelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dgelu(grad, fwd_input, quantizer)
 
-    def dbias_dsilu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dsilu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dsilu(grad, fwd_input, quantizer)
 
-    def dbias_drelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_drelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_drelu(grad, fwd_input, quantizer)
 
-    def dbias_dqgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dqgelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dqgelu(grad, fwd_input, quantizer)
 
-    def dbias_dsrelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dsrelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dsrelu(grad, fwd_input, quantizer)
 
@@ -439,7 +494,9 @@ class CUDABackend(TEFLBackendBase):
             dy = dy.view(-1, dy.shape[-1])
             x = x.view(-1, x.shape[-1])
 
-        dx, dgamma, dbeta = tex.layernorm_bwd(dy, x, mu, rsigma, gamma, sm_margin, zero_centered_gamma)
+        dx, dgamma, dbeta = tex.layernorm_bwd(
+            dy, x, mu, rsigma, gamma, sm_margin, zero_centered_gamma
+        )
 
         if len(orig_shape) > 2:
             dx = dx.view(*orig_shape)
@@ -607,26 +664,26 @@ class CUDABackend(TEFLBackendBase):
             if py_enum is None:
                 return None
 
-            if type(py_enum).__module__ == 'transformer_engine_torch_nv':
+            if type(py_enum).__module__ == "transformer_engine_torch_nv":
                 return py_enum
 
-            if hasattr(py_enum, 'name'):
+            if hasattr(py_enum, "name"):
                 enum_name = py_enum.name
                 if hasattr(native_enum_class, enum_name):
                     return getattr(native_enum_class, enum_name)
 
-            if hasattr(py_enum, 'value'):
+            if hasattr(py_enum, "value"):
                 enum_value = int(py_enum.value)
                 for member_name in dir(native_enum_class):
-                    if not member_name.startswith('_'):
+                    if not member_name.startswith("_"):
                         try:
                             member = getattr(native_enum_class, member_name)
-                            if hasattr(member, 'value') and int(member.value) == enum_value:
+                            if hasattr(member, "value") and int(member.value) == enum_value:
                                 return member
                         except:
                             pass
 
-            if hasattr(py_enum, 'value'):
+            if hasattr(py_enum, "value"):
                 return int(py_enum.value)
 
             return py_enum
@@ -652,9 +709,9 @@ class CUDABackend(TEFLBackendBase):
         def convert_enum(py_enum, native_enum_class):
             if py_enum is None:
                 return None
-            if type(py_enum).__module__ == 'transformer_engine_torch_nv':
+            if type(py_enum).__module__ == "transformer_engine_torch_nv":
                 return py_enum
-            if hasattr(py_enum, 'name'):
+            if hasattr(py_enum, "name"):
                 enum_name = py_enum.name
                 if hasattr(native_enum_class, enum_name):
                     return getattr(native_enum_class, enum_name)
@@ -678,9 +735,9 @@ class CUDABackend(TEFLBackendBase):
         def convert_enum(py_enum, native_enum_class):
             if py_enum is None:
                 return None
-            if type(py_enum).__module__ == 'transformer_engine_torch_nv':
+            if type(py_enum).__module__ == "transformer_engine_torch_nv":
                 return py_enum
-            if hasattr(py_enum, 'name'):
+            if hasattr(py_enum, "name"):
                 enum_name = py_enum.name
                 if hasattr(native_enum_class, enum_name):
                     return getattr(native_enum_class, enum_name)
@@ -698,8 +755,8 @@ class CUDABackend(TEFLBackendBase):
         if len(args) > 19:
             args_list[19] = self._to_te_dtype(args[19])
 
-        if 'dqkv_dtype' in kwargs:
-            kwargs['dqkv_dtype'] = self._to_te_dtype(kwargs['dqkv_dtype'])
+        if "dqkv_dtype" in kwargs:
+            kwargs["dqkv_dtype"] = self._to_te_dtype(kwargs["dqkv_dtype"])
 
         return tex.fused_attn_bwd(*args_list, **kwargs)
 
@@ -752,8 +809,14 @@ class CUDABackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.fused_topk_with_score_function_fwd(
-            logits, topk, use_pre_softmax, num_groups, group_topk,
-            scaling_factor, score_function, expert_bias
+            logits,
+            topk,
+            use_pre_softmax,
+            num_groups,
+            group_topk,
+            scaling_factor,
+            score_function,
+            expert_bias,
         )
 
     def fused_topk_with_score_function_bwd(
@@ -770,8 +833,15 @@ class CUDABackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.fused_topk_with_score_function_bwd(
-            num_tokens, num_experts, routing_map, intermediate_output,
-            grad_probs, topk, use_pre_softmax, scaling_factor, score_function
+            num_tokens,
+            num_experts,
+            routing_map,
+            intermediate_output,
+            grad_probs,
+            topk,
+            use_pre_softmax,
+            scaling_factor,
+            score_function,
         )
 
     def fused_score_for_moe_aux_loss_fwd(
@@ -810,8 +880,7 @@ class CUDABackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.fused_moe_aux_loss_fwd(
-            probs, tokens_per_expert, total_num_tokens, num_experts,
-            num_rows, num_cols, topk, coeff
+            probs, tokens_per_expert, total_num_tokens, num_experts, num_rows, num_cols, topk, coeff
         )
 
     def fused_moe_aux_loss_bwd(
@@ -901,7 +970,9 @@ class CUDABackend(TEFLBackendBase):
         out_dtype: Any,
     ) -> None:
         tex = self._get_tex()
-        tex.fp8_block_scaling_partial_cast(inp, out, scale, h, w, start_offset, block_len, out_dtype)
+        tex.fp8_block_scaling_partial_cast(
+            inp, out, scale, h, w, start_offset, block_len, out_dtype
+        )
 
     def fused_multi_row_padding(self, *args, **kwargs) -> Any:
         tex = self._get_tex()
@@ -996,7 +1067,9 @@ class CUDABackend(TEFLBackendBase):
         per_tensor: bool = False,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         tex = self._get_tex()
-        return tex.multi_tensor_unscale_l2norm(chunk_size, noop_flag, tensor_lists, scale, per_tensor)
+        return tex.multi_tensor_unscale_l2norm(
+            chunk_size, noop_flag, tensor_lists, scale, per_tensor
+        )
 
     def multi_tensor_adam(
         self,
@@ -1016,8 +1089,17 @@ class CUDABackend(TEFLBackendBase):
         if chunk_size is None:
             return tex.multi_tensor_adam
         tex.multi_tensor_adam(
-            chunk_size, noop_flag, tensor_lists, lr, beta1, beta2,
-            eps, step, mode, bias_correction, weight_decay
+            chunk_size,
+            noop_flag,
+            tensor_lists,
+            lr,
+            beta1,
+            beta2,
+            eps,
+            step,
+            mode,
+            bias_correction,
+            weight_decay,
         )
 
     def multi_tensor_adam_param_remainder(self, *args, **kwargs) -> None:
@@ -1051,7 +1133,9 @@ class CUDABackend(TEFLBackendBase):
         recv_stream: Any,
     ) -> Any:
         tex = self._get_tex()
-        return tex.bulk_overlap_ag_with_external_gemm(allgather_communicator, send_stream, recv_stream)
+        return tex.bulk_overlap_ag_with_external_gemm(
+            allgather_communicator, send_stream, recv_stream
+        )
 
     def create_fp8_tensor_meta(self) -> FP8TensorMeta:
         tex = self._get_tex()
@@ -1085,10 +1169,19 @@ class CUDABackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.CommOverlap(
-            buffer_shape, buffer_dtype, helper, tp_size,
-            num_splits, num_max_streams, comm_cga_size,
-            gemm_priority, comm_priority, num_comm_sm,
-            set_sm_margin, atomic_gemm, rs_overlap_first_gemm
+            buffer_shape,
+            buffer_dtype,
+            helper,
+            tp_size,
+            num_splits,
+            num_max_streams,
+            comm_cga_size,
+            gemm_priority,
+            comm_priority,
+            num_comm_sm,
+            set_sm_margin,
+            atomic_gemm,
+            rs_overlap_first_gemm,
         )
 
     def create_comm_overlap_p2p(
@@ -1110,7 +1203,18 @@ class CUDABackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.CommOverlapP2P(
-            buffer_shape, buffer_dtype, helper, tp_size, comm_type,
-            num_max_streams, comm_cga_size, gemm_priority, comm_priority,
-            num_comm_sm, set_sm_margin, atomic_gemm, use_ce, aggregate
+            buffer_shape,
+            buffer_dtype,
+            helper,
+            tp_size,
+            comm_type,
+            num_max_streams,
+            comm_cga_size,
+            gemm_priority,
+            comm_priority,
+            num_comm_sm,
+            set_sm_margin,
+            atomic_gemm,
+            use_ce,
+            aggregate,
         )

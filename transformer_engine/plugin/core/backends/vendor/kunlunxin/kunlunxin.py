@@ -8,26 +8,26 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import torch
 
-from transformer_engine.plugin.core.ops import TEFLBackendBase, FP8TensorMeta, NVTE_Fused_Attn_Backend
+from transformer_engine.plugin.core.ops import (
+    TEFLBackendBase,
+    FP8TensorMeta,
+    NVTE_Fused_Attn_Backend,
+)
 
 _kunlunxin_available = False
+
 
 def _ensure_kunlunxin_available():
     global _kunlunxin_available
     if not _kunlunxin_available:
         try:
-            result = subprocess.run(
-                ["xpu-smi"],
-                capture_output=True,
-                timeout=10,
-                text=True
-            )
-            
+            result = subprocess.run(["xpu-smi"], capture_output=True, timeout=10, text=True)
+
             if result.returncode == 0:
                 _kunlunxin_available = True
             else:
                 _kunlunxin_available = False
-                
+
         except subprocess.TimeoutExpired:
             _kunlunxin_available = False
         except FileNotFoundError:
@@ -36,7 +36,7 @@ def _ensure_kunlunxin_available():
             _kunlunxin_available = False
         except Exception as e:
             _kunlunxin_available = False
-    
+
     return _kunlunxin_available
 
 
@@ -58,4 +58,5 @@ class KunLunXinBackend(TEFLBackendBase):
 
     def get_flash_attention_class(self):
         from .flash_attention import FlashAttentionTorch
+
         return FlashAttentionTorch

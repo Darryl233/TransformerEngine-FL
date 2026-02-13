@@ -9,7 +9,9 @@ from contextlib import nullcontext
 import torch
 
 from .logger_manager import get_logger
+
 logger = get_logger()
+
 
 class DType(IntEnum):
     kByte = 0
@@ -25,9 +27,11 @@ class DType(IntEnum):
     kFloat4E2M1 = 10
     kNumTypes = 11
 
+
 class Float8BlockScaleTensorFormat(IntEnum):
     GEMM_READY = 0
     COMPACT = 1
+
 
 class NVTE_Activation_Type(IntEnum):
     GELU = 0
@@ -42,14 +46,17 @@ class NVTE_Activation_Type(IntEnum):
     SREGLU = 9
     CLAMPED_SWIGLU = 10
 
+
 class NVTE_Softmax_Type(IntEnum):
     NVTE_VANILLA_SOFTMAX = 0
     NVTE_OFF_BY_ONE_SOFTMAX = 1
     NVTE_LEARNABLE_SOFTMAX = 2
 
+
 class CommGemmOverlapRole(IntEnum):
     INPUT = 0
     OUTPUT = 1
+
 
 class FP8FwdTensors(IntEnum):
     GEMM1_INPUT = 0
@@ -62,6 +69,7 @@ class FP8FwdTensors(IntEnum):
     GEMM3_WEIGHT = 7
     GEMM3_OUTPUT = 8
 
+
 class FP8BwdTensors(IntEnum):
     GRAD_OUTPUT1 = 0
     GRAD_INPUT1 = 1
@@ -70,11 +78,13 @@ class FP8BwdTensors(IntEnum):
     GRAD_OUTPUT3 = 4
     GRAD_INPUT3 = 5
 
+
 class NVTE_Bias_Type(IntEnum):
     NVTE_NO_BIAS = 0
     NVTE_PRE_SCALE_BIAS = 1
     NVTE_POST_SCALE_BIAS = 2
     NVTE_ALIBI = 3
+
 
 class NVTE_Mask_Type(IntEnum):
     NVTE_NO_MASK = 0
@@ -84,11 +94,13 @@ class NVTE_Mask_Type(IntEnum):
     NVTE_CAUSAL_BOTTOM_RIGHT_MASK = 4
     NVTE_PADDING_CAUSAL_BOTTOM_RIGHT_MASK = 5
 
+
 class NVTE_Fused_Attn_Backend(IntEnum):
     NVTE_No_Backend = -1
     NVTE_F16_max512_seqlen = 0
     NVTE_F16_arbitrary_seqlen = 1
     NVTE_FP8 = 2
+
 
 class NVTE_QKV_Format(IntEnum):
     NVTE_SBHD = 0
@@ -98,6 +110,7 @@ class NVTE_QKV_Format(IntEnum):
     NVTE_SBHD_2BSHD = 4
     NVTE_THD_2BSHD = 5
     NVTE_THD_2SBHD = 6
+
 
 class NVTE_QKV_Layout(IntEnum):
     NVTE_SB3HD = 0
@@ -126,9 +139,11 @@ class NVTE_QKV_Layout(IntEnum):
     NVTE_Paged_KV_THD_BSHD_BSHD = 23
     NVTE_Paged_KV_THD_SBHD_SBHD = 24
 
+
 class CommOverlapType(IntEnum):
     RS = 0
     AG = 1
+
 
 class CommOverlapAlgo(IntEnum):
     BULK_OVERLAP_AG = 0
@@ -141,34 +156,38 @@ class CommOverlapAlgo(IntEnum):
     ATOMIC_GEMM_RS_P2P = 7
     EXTERNAL_BULK_OVERLAP_AG = 8
 
+
 class FP8TensorMeta:
     def __init__(self):
         self.scale: Optional[torch.Tensor] = None
         self.scale_inv: Optional[torch.Tensor] = None
         self.amax_history: Optional[torch.Tensor] = None
 
+
 class CommGemmOverlapAlgoConfig:
     def __init__(self, *args, **kwargs):
         pass
 
+
 class FusedAdamCUDAKernel:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError(
-            "FusedAdamCUDAKernel requires CUDA extensions. "
-            "Not supported in FL mode."
+            "FusedAdamCUDAKernel requires CUDA extensions. Not supported in FL mode."
         )
+
 
 class FusedSGDCUDAKernel:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError(
-            "FusedSGDCUDAKernel requires CUDA extensions. "
-            "Not supported in FL mode."
+            "FusedSGDCUDAKernel requires CUDA extensions. Not supported in FL mode."
         )
+
 
 class CommOverlapHelper:
     def __init__(self, world_group=None, intra_node_group=None):
         self.world_group = world_group
         self.intra_node_group = intra_node_group
+
 
 class CommOverlap:
     def __init__(self, *args, **kwargs):
@@ -177,12 +196,14 @@ class CommOverlap:
             "Direct instantiation is not supported in FL mode."
         )
 
+
 class CommOverlapP2P:
     def __init__(self, *args, **kwargs):
         raise NotImplementedError(
             "CommOverlapP2P should be created via backend.create_comm_overlap_p2p(). "
             "Direct instantiation is not supported in FL mode."
         )
+
 
 class TEFLBackendBase(ABC):
     @abstractmethod
@@ -1069,6 +1090,7 @@ class TEFLBackendBase(ABC):
     ) -> Any:
         raise NotImplementedError
 
+
 class FlashAttentionBase(torch.nn.Module, ABC):
 
     def __init__(
@@ -1258,6 +1280,7 @@ class TEFLModule:
         """
         # Import here to avoid circular dependency
         from .manager import get_default_manager
+
         self._manager = manager if manager is not None else get_default_manager()
 
         self.DType = DType
@@ -1288,7 +1311,7 @@ class TEFLModule:
         """
         Dynamically resolve operators through OpManager.
         """
-        if name.startswith('_'):
+        if name.startswith("_"):
             raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
 
         # Verify the operator exists before returning the bound call method
@@ -1297,27 +1320,40 @@ class TEFLModule:
             available_ops = self._manager.registry.list_operators()
             if name not in available_ops:
                 raise AttributeError(
-                    f"Operator '{name}' not found. "
-                    f"Available operators: {available_ops}"
+                    f"Operator '{name}' not found. Available operators: {available_ops}"
                 )
         except RuntimeError as e:
             # Re-raise as AttributeError for better error messages
-            raise AttributeError(
-                f"Error accessing operator '{name}': {e}"
-            ) from e
+            raise AttributeError(f"Error accessing operator '{name}': {e}") from e
 
         # Return a bound call method for this operator
         import functools
+
         return functools.partial(self._manager.call, name)
 
     def __dir__(self):
         module_attrs = [
-            'DType', 'Float8BlockScaleTensorFormat', 'FP8FwdTensors', 'FP8BwdTensors',
-            'FP8TensorMeta', 'NVTE_Activation_Type', 'NVTE_Bias_Type', 'NVTE_Mask_Type',
-            'NVTE_Softmax_Type', 'NVTE_Fused_Attn_Backend', 'NVTE_QKV_Format', 'NVTE_QKV_Layout',
-            'CommOverlapType', 'CommOverlapAlgo', 'CommGemmOverlapRole',
-            'CommOverlapHelper', 'CommOverlap', 'CommOverlapP2P', 'CommGemmOverlapAlgoConfig',
-            'FusedAdamCUDAKernel', 'FusedSGDCUDAKernel'
+            "DType",
+            "Float8BlockScaleTensorFormat",
+            "FP8FwdTensors",
+            "FP8BwdTensors",
+            "FP8TensorMeta",
+            "NVTE_Activation_Type",
+            "NVTE_Bias_Type",
+            "NVTE_Mask_Type",
+            "NVTE_Softmax_Type",
+            "NVTE_Fused_Attn_Backend",
+            "NVTE_QKV_Format",
+            "NVTE_QKV_Layout",
+            "CommOverlapType",
+            "CommOverlapAlgo",
+            "CommGemmOverlapRole",
+            "CommOverlapHelper",
+            "CommOverlap",
+            "CommOverlapP2P",
+            "CommGemmOverlapAlgoConfig",
+            "FusedAdamCUDAKernel",
+            "FusedSGDCUDAKernel",
         ]
 
         # Add operator names from OpManager's registry
@@ -1350,12 +1386,12 @@ class TEFLModule:
 
         # Prepare initialization parameters
         init_params = {
-            'softmax_scale': softmax_scale,
-            'attention_dropout': attention_dropout,
-            'attention_dropout_ctx': attention_dropout_ctx,
-            'attention_type': attention_type,
-            'layer_number': layer_number,
-            'deterministic': deterministic,
+            "softmax_scale": softmax_scale,
+            "attention_dropout": attention_dropout,
+            "attention_dropout_ctx": attention_dropout_ctx,
+            "attention_type": attention_type,
+            "layer_number": layer_number,
+            "deterministic": deterministic,
         }
 
         # Instantiate the FlashAttention
@@ -1371,9 +1407,11 @@ class TEFLModule:
         op_count = len(self._manager.registry.list_operators())
         return f"TEFLModule(operators={op_count}, manager={self._manager.__class__.__name__})"
 
+
 # Global singleton instance
 _global_tefl_module: Optional[TEFLModule] = None
 _tefl_module_lock = None
+
 
 def get_tefl_module() -> TEFLModule:
     """
@@ -1407,6 +1445,7 @@ def get_tefl_module() -> TEFLModule:
 
     return _global_tefl_module
 
+
 def reset_tefl_module() -> None:
     """
     Reset the global TEFLModule instance.
@@ -1422,10 +1461,12 @@ def reset_tefl_module() -> None:
 
     if _tefl_module_lock is None:
         import threading
+
         _tefl_module_lock = threading.RLock()
 
     with _tefl_module_lock:
         _global_tefl_module = None
+
 
 # Backward compatibility functions
 def get_registry():
@@ -1446,7 +1487,9 @@ def get_registry():
         >>> ops = registry.list_operators()
     """
     from .manager import get_default_manager
+
     return get_default_manager().registry
+
 
 def get_manager():
     """
@@ -1463,7 +1506,9 @@ def get_manager():
         >>> impl_fn = manager.resolve("rmsnorm_fwd")
     """
     from .manager import get_default_manager
+
     return get_default_manager()
+
 
 def reset_registry() -> None:
     """
@@ -1474,6 +1519,7 @@ def reset_registry() -> None:
     This function is kept for backward compatibility.
     """
     from .manager import reset_default_manager
+
     reset_default_manager()
     # Also reset the TEFLModule singleton since it depends on OpManager
     reset_tefl_module()

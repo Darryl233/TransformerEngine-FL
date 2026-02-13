@@ -11,27 +11,54 @@ from ...ops import TEFLBackendBase, FP8TensorMeta, NVTE_Fused_Attn_Backend
 
 from .impl import (
     general_gemm_torch,
-    rmsnorm_fwd_torch, rmsnorm_bwd_torch,
-    layernorm_fwd_torch, layernorm_bwd_torch,
-    gelu_torch, geglu_torch, qgelu_torch, qgeglu_torch,
-    relu_torch, reglu_torch, srelu_torch, sreglu_torch,
-    silu_torch, swiglu_torch, clamped_swiglu_torch,
-    dgelu_torch, dgeglu_torch, dqgelu_torch, dqgeglu_torch,
-    drelu_torch, dreglu_torch, dsrelu_torch, dsreglu_torch,
-    dsilu_torch, dswiglu_torch, clamped_dswiglu_torch,
-    dbias_dgelu_torch, dbias_dsilu_torch, dbias_drelu_torch,
-    dbias_dqgelu_torch, dbias_dsrelu_torch,
-    scaled_softmax_forward_torch, scaled_softmax_backward_torch,
-    scaled_masked_softmax_forward_torch, scaled_masked_softmax_backward_torch,
+    rmsnorm_fwd_torch,
+    rmsnorm_bwd_torch,
+    layernorm_fwd_torch,
+    layernorm_bwd_torch,
+    gelu_torch,
+    geglu_torch,
+    qgelu_torch,
+    qgeglu_torch,
+    relu_torch,
+    reglu_torch,
+    srelu_torch,
+    sreglu_torch,
+    silu_torch,
+    swiglu_torch,
+    clamped_swiglu_torch,
+    dgelu_torch,
+    dgeglu_torch,
+    dqgelu_torch,
+    dqgeglu_torch,
+    drelu_torch,
+    dreglu_torch,
+    dsrelu_torch,
+    dsreglu_torch,
+    dsilu_torch,
+    dswiglu_torch,
+    clamped_dswiglu_torch,
+    dbias_dgelu_torch,
+    dbias_dsilu_torch,
+    dbias_drelu_torch,
+    dbias_dqgelu_torch,
+    dbias_dsrelu_torch,
+    scaled_softmax_forward_torch,
+    scaled_softmax_backward_torch,
+    scaled_masked_softmax_forward_torch,
+    scaled_masked_softmax_backward_torch,
     scaled_upper_triang_masked_softmax_forward_torch,
     scaled_upper_triang_masked_softmax_backward_torch,
     scaled_aligned_causal_masked_softmax_forward_torch,
     scaled_aligned_causal_masked_softmax_backward_torch,
-    dropout_fwd_torch, dropout_bwd_torch,
-    multi_tensor_scale_torch, multi_tensor_l2norm_torch,
-    multi_tensor_adam_torch, multi_tensor_adam_param_remainder_torch,
+    dropout_fwd_torch,
+    dropout_bwd_torch,
+    multi_tensor_scale_torch,
+    multi_tensor_l2norm_torch,
+    multi_tensor_adam_torch,
+    multi_tensor_adam_param_remainder_torch,
     multi_tensor_sgd_torch,
 )
+
 
 class ReferenceBackend(TEFLBackendBase):
     @staticmethod
@@ -43,11 +70,13 @@ class ReferenceBackend(TEFLBackendBase):
 
     def get_flash_attention_class(self):
         from .flash_attention import FlashAttentionTorch
+
         return FlashAttentionTorch
 
     def get_attention_backend(self, attention_params=None):
         from packaging.version import Version as PkgVersion
         from ...logger_manager import get_logger
+
         logger = get_logger()
 
         # Read environment variables to determine which backends to enable
@@ -130,7 +159,13 @@ class ReferenceBackend(TEFLBackendBase):
     def te_general_grouped_gemm(self, *args, **kwargs) -> Any:
         raise NotImplementedError("te_general_grouped_gemm - not implemented in reference backend")
 
-    def quantize(self, tensor: torch.Tensor, quantizer: Any, output: Optional[torch.Tensor] = None, noop: Optional[torch.Tensor] = None) -> Any:
+    def quantize(
+        self,
+        tensor: torch.Tensor,
+        quantizer: Any,
+        output: Optional[torch.Tensor] = None,
+        noop: Optional[torch.Tensor] = None,
+    ) -> Any:
         raise NotImplementedError("quantize - not implemented in reference backend")
 
     def dequantize(self, input: torch.Tensor, otype: torch.dtype) -> torch.Tensor:
@@ -169,7 +204,9 @@ class ReferenceBackend(TEFLBackendBase):
     def swiglu(self, input: torch.Tensor, quantizer: Any) -> Any:
         return swiglu_torch(input, quantizer)
 
-    def clamped_swiglu(self, input: torch.Tensor, quantizer: Any, limit: float = 7.0, alpha: float = 1.702) -> Any:
+    def clamped_swiglu(
+        self, input: torch.Tensor, quantizer: Any, limit: float = 7.0, alpha: float = 1.702
+    ) -> Any:
         return clamped_swiglu_torch(input, quantizer, limit, alpha)
 
     def dgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
@@ -202,22 +239,39 @@ class ReferenceBackend(TEFLBackendBase):
     def dswiglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         return dswiglu_torch(grad, fwd_input, quantizer)
 
-    def clamped_dswiglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any, limit: float = 7.0, alpha: float = 1.702) -> Any:
+    def clamped_dswiglu(
+        self,
+        grad: torch.Tensor,
+        fwd_input: torch.Tensor,
+        quantizer: Any,
+        limit: float = 7.0,
+        alpha: float = 1.702,
+    ) -> Any:
         return clamped_dswiglu_torch(grad, fwd_input, quantizer, limit, alpha)
 
-    def dbias_dgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dgelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         return dbias_dgelu_torch(grad, fwd_input, quantizer)
 
-    def dbias_dsilu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dsilu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         return dbias_dsilu_torch(grad, fwd_input, quantizer)
 
-    def dbias_drelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_drelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         return dbias_drelu_torch(grad, fwd_input, quantizer)
 
-    def dbias_dqgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dqgelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         return dbias_dqgelu_torch(grad, fwd_input, quantizer)
 
-    def dbias_dsrelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dsrelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         return dbias_dsrelu_torch(grad, fwd_input, quantizer)
 
     def layernorm_fwd(
@@ -309,10 +363,14 @@ class ReferenceBackend(TEFLBackendBase):
     def rmsnorm_bwd_add(self, *args, **kwargs) -> Any:
         raise NotImplementedError("rmsnorm_bwd_add - not implemented in reference backend")
 
-    def multi_tensor_quantize(self, tensor_list: List[torch.Tensor], quantizer_list: List[Any]) -> List[Any]:
+    def multi_tensor_quantize(
+        self, tensor_list: List[torch.Tensor], quantizer_list: List[Any]
+    ) -> List[Any]:
         raise NotImplementedError("multi_tensor_quantize - not implemented in reference backend")
 
-    def split_quantize(self, tensor: torch.Tensor, split_sections: List[int], quantizer_list: List[Any]) -> List[Any]:
+    def split_quantize(
+        self, tensor: torch.Tensor, split_sections: List[int], quantizer_list: List[Any]
+    ) -> List[Any]:
         raise NotImplementedError("split_quantize - not implemented in reference backend")
 
     def moe_permute_fwd(self, *args, **kwargs) -> Any:
@@ -330,26 +388,42 @@ class ReferenceBackend(TEFLBackendBase):
     def scaled_softmax_forward(self, input: torch.Tensor, scale: float) -> torch.Tensor:
         return scaled_softmax_forward_torch(input, scale)
 
-    def scaled_softmax_backward(self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float) -> torch.Tensor:
+    def scaled_softmax_backward(
+        self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float
+    ) -> torch.Tensor:
         return scaled_softmax_backward_torch(output_grad, softmax_output, scale)
 
-    def scaled_masked_softmax_forward(self, input: torch.Tensor, mask: torch.Tensor, scale: float) -> torch.Tensor:
+    def scaled_masked_softmax_forward(
+        self, input: torch.Tensor, mask: torch.Tensor, scale: float
+    ) -> torch.Tensor:
         return scaled_masked_softmax_forward_torch(input, mask, scale)
 
-    def scaled_masked_softmax_backward(self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float) -> torch.Tensor:
+    def scaled_masked_softmax_backward(
+        self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float
+    ) -> torch.Tensor:
         return scaled_masked_softmax_backward_torch(output_grad, softmax_output, scale)
 
-    def scaled_upper_triang_masked_softmax_forward(self, input: torch.Tensor, scale: float) -> torch.Tensor:
+    def scaled_upper_triang_masked_softmax_forward(
+        self, input: torch.Tensor, scale: float
+    ) -> torch.Tensor:
         return scaled_upper_triang_masked_softmax_forward_torch(input, scale)
 
-    def scaled_upper_triang_masked_softmax_backward(self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float) -> torch.Tensor:
+    def scaled_upper_triang_masked_softmax_backward(
+        self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float
+    ) -> torch.Tensor:
         return scaled_upper_triang_masked_softmax_backward_torch(output_grad, softmax_output, scale)
 
-    def scaled_aligned_causal_masked_softmax_forward(self, input: torch.Tensor, scale: float) -> torch.Tensor:
+    def scaled_aligned_causal_masked_softmax_forward(
+        self, input: torch.Tensor, scale: float
+    ) -> torch.Tensor:
         return scaled_aligned_causal_masked_softmax_forward_torch(input, scale)
 
-    def scaled_aligned_causal_masked_softmax_backward(self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float) -> torch.Tensor:
-        return scaled_aligned_causal_masked_softmax_backward_torch(output_grad, softmax_output, scale)
+    def scaled_aligned_causal_masked_softmax_backward(
+        self, output_grad: torch.Tensor, softmax_output: torch.Tensor, scale: float
+    ) -> torch.Tensor:
+        return scaled_aligned_causal_masked_softmax_backward_torch(
+            output_grad, softmax_output, scale
+        )
 
     def get_fused_attn_backend(self, *args, **kwargs) -> int:
         return NVTE_Fused_Attn_Backend.NVTE_No_Backend
@@ -388,16 +462,24 @@ class ReferenceBackend(TEFLBackendBase):
         raise NotImplementedError("fused_qkv_rope_backward - not implemented in reference backend")
 
     def fused_topk_with_score_function_fwd(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("fused_topk_with_score_function_fwd - not implemented in reference backend")
+        raise NotImplementedError(
+            "fused_topk_with_score_function_fwd - not implemented in reference backend"
+        )
 
     def fused_topk_with_score_function_bwd(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("fused_topk_with_score_function_bwd - not implemented in reference backend")
+        raise NotImplementedError(
+            "fused_topk_with_score_function_bwd - not implemented in reference backend"
+        )
 
     def fused_score_for_moe_aux_loss_fwd(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("fused_score_for_moe_aux_loss_fwd - not implemented in reference backend")
+        raise NotImplementedError(
+            "fused_score_for_moe_aux_loss_fwd - not implemented in reference backend"
+        )
 
     def fused_score_for_moe_aux_loss_bwd(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("fused_score_for_moe_aux_loss_bwd - not implemented in reference backend")
+        raise NotImplementedError(
+            "fused_score_for_moe_aux_loss_bwd - not implemented in reference backend"
+        )
 
     def fused_moe_aux_loss_fwd(self, *args, **kwargs) -> Any:
         raise NotImplementedError("fused_moe_aux_loss_fwd - not implemented in reference backend")
@@ -405,10 +487,18 @@ class ReferenceBackend(TEFLBackendBase):
     def fused_moe_aux_loss_bwd(self, *args, **kwargs) -> Any:
         raise NotImplementedError("fused_moe_aux_loss_bwd - not implemented in reference backend")
 
-    def dropout_fwd(self, input: torch.Tensor, dropout_probability: float, out: Optional[torch.Tensor] = None) -> Tuple[torch.Tensor, torch.Tensor]:
+    def dropout_fwd(
+        self, input: torch.Tensor, dropout_probability: float, out: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         return dropout_fwd_torch(input, dropout_probability, out)
 
-    def dropout_bwd(self, grad_output: torch.Tensor, mask: torch.Tensor, dropout_probability: float, grad_input: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def dropout_bwd(
+        self,
+        grad_output: torch.Tensor,
+        mask: torch.Tensor,
+        dropout_probability: float,
+        grad_input: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
         return dropout_bwd_torch(grad_output, mask, dropout_probability, grad_input)
 
     def fp8_transpose(self, input: torch.Tensor, dtype: Any, *, out: torch.Tensor) -> None:
@@ -421,19 +511,27 @@ class ReferenceBackend(TEFLBackendBase):
         raise NotImplementedError("compute_amax - not implemented in reference backend")
 
     def fused_amax_and_scale_update_after_reduction(self, *args, **kwargs) -> None:
-        raise NotImplementedError("fused_amax_and_scale_update_after_reduction - not implemented in reference backend")
+        raise NotImplementedError(
+            "fused_amax_and_scale_update_after_reduction - not implemented in reference backend"
+        )
 
     def fp8_block_scaling_compute_partial_amax(self, *args, **kwargs) -> None:
-        raise NotImplementedError("fp8_block_scaling_compute_partial_amax - not implemented in reference backend")
+        raise NotImplementedError(
+            "fp8_block_scaling_compute_partial_amax - not implemented in reference backend"
+        )
 
     def fp8_block_scaling_partial_cast(self, *args, **kwargs) -> None:
-        raise NotImplementedError("fp8_block_scaling_partial_cast - not implemented in reference backend")
+        raise NotImplementedError(
+            "fp8_block_scaling_partial_cast - not implemented in reference backend"
+        )
 
     def fused_multi_row_padding(self, *args, **kwargs) -> Any:
         raise NotImplementedError("fused_multi_row_padding - not implemented in reference backend")
 
     def fused_multi_row_unpadding(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("fused_multi_row_unpadding - not implemented in reference backend")
+        raise NotImplementedError(
+            "fused_multi_row_unpadding - not implemented in reference backend"
+        )
 
     def get_cublasLt_version(self) -> int:
         return 0
@@ -448,7 +546,9 @@ class ReferenceBackend(TEFLBackendBase):
         raise NotImplementedError("thd_read_half_tensor - not implemented in reference backend")
 
     def thd_second_half_lse_correction(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("thd_second_half_lse_correction - not implemented in reference backend")
+        raise NotImplementedError(
+            "thd_second_half_lse_correction - not implemented in reference backend"
+        )
 
     def thd_read_second_half_lse(self, *args, **kwargs) -> Any:
         raise NotImplementedError("thd_read_second_half_lse - not implemented in reference backend")
@@ -460,7 +560,9 @@ class ReferenceBackend(TEFLBackendBase):
         raise NotImplementedError("thd_grad_correction - not implemented in reference backend")
 
     def thd_get_partitioned_indices(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("thd_get_partitioned_indices - not implemented in reference backend")
+        raise NotImplementedError(
+            "thd_get_partitioned_indices - not implemented in reference backend"
+        )
 
     def init_nvshmem_backend(self, *args, **kwargs) -> None:
         raise NotImplementedError("init_nvshmem_backend - not implemented in reference backend")
@@ -469,21 +571,44 @@ class ReferenceBackend(TEFLBackendBase):
         raise NotImplementedError("create_nvshmem_tensor - not implemented in reference backend")
 
     def nvshmem_send_on_current_stream(self, *args, **kwargs) -> None:
-        raise NotImplementedError("nvshmem_send_on_current_stream - not implemented in reference backend")
+        raise NotImplementedError(
+            "nvshmem_send_on_current_stream - not implemented in reference backend"
+        )
 
     def nvshmem_wait_on_current_stream(self, *args, **kwargs) -> None:
-        raise NotImplementedError("nvshmem_wait_on_current_stream - not implemented in reference backend")
+        raise NotImplementedError(
+            "nvshmem_wait_on_current_stream - not implemented in reference backend"
+        )
 
     def nvshmem_finalize(self) -> None:
         raise NotImplementedError("nvshmem_finalize - not implemented in reference backend")
 
-    def multi_tensor_scale(self, chunk_size: int, noop_flag: torch.Tensor, tensor_lists: List[List[torch.Tensor]], scale: float) -> None:
+    def multi_tensor_scale(
+        self,
+        chunk_size: int,
+        noop_flag: torch.Tensor,
+        tensor_lists: List[List[torch.Tensor]],
+        scale: float,
+    ) -> None:
         return multi_tensor_scale_torch(chunk_size, noop_flag, tensor_lists, scale)
 
-    def multi_tensor_l2norm(self, chunk_size: int, noop_flag: torch.Tensor, tensor_lists: List[List[torch.Tensor]], per_tensor: bool = False) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def multi_tensor_l2norm(
+        self,
+        chunk_size: int,
+        noop_flag: torch.Tensor,
+        tensor_lists: List[List[torch.Tensor]],
+        per_tensor: bool = False,
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
         return multi_tensor_l2norm_torch(chunk_size, noop_flag, tensor_lists, per_tensor)
 
-    def multi_tensor_unscale_l2norm(self, chunk_size: int, noop_flag: torch.Tensor, tensor_lists: List[List[torch.Tensor]], scale: torch.Tensor, per_tensor: bool = False) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def multi_tensor_unscale_l2norm(
+        self,
+        chunk_size: int,
+        noop_flag: torch.Tensor,
+        tensor_lists: List[List[torch.Tensor]],
+        scale: torch.Tensor,
+        per_tensor: bool = False,
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute L2 norm after unscaling.
 
         Note: scale parameter is actually inv_scale (1/loss_scale).
@@ -516,25 +641,35 @@ class ReferenceBackend(TEFLBackendBase):
         raise NotImplementedError("multi_tensor_adam_fp8 - not implemented in reference backend")
 
     def multi_tensor_adam_capturable(self, *args, **kwargs) -> None:
-        raise NotImplementedError("multi_tensor_adam_capturable - not implemented in reference backend")
+        raise NotImplementedError(
+            "multi_tensor_adam_capturable - not implemented in reference backend"
+        )
 
     def multi_tensor_adam_capturable_master(self, *args, **kwargs) -> None:
-        raise NotImplementedError("multi_tensor_adam_capturable_master - not implemented in reference backend")
+        raise NotImplementedError(
+            "multi_tensor_adam_capturable_master - not implemented in reference backend"
+        )
 
     def multi_tensor_sgd(self, *args, **kwargs) -> None:
         return multi_tensor_sgd_torch(*args, **kwargs)
 
     def multi_tensor_compute_scale_and_scale_inv(self, *args, **kwargs) -> None:
-        raise NotImplementedError("multi_tensor_compute_scale_and_scale_inv - not implemented in reference backend")
+        raise NotImplementedError(
+            "multi_tensor_compute_scale_and_scale_inv - not implemented in reference backend"
+        )
 
     def bulk_overlap_ag_with_external_gemm(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("bulk_overlap_ag_with_external_gemm - not implemented in reference backend")
+        raise NotImplementedError(
+            "bulk_overlap_ag_with_external_gemm - not implemented in reference backend"
+        )
 
     def create_fp8_tensor_meta(self) -> FP8TensorMeta:
         return FP8TensorMeta()
 
     def create_comm_overlap_helper(self, *args, **kwargs) -> Any:
-        raise NotImplementedError("create_comm_overlap_helper - not implemented in reference backend")
+        raise NotImplementedError(
+            "create_comm_overlap_helper - not implemented in reference backend"
+        )
 
     def create_comm_overlap(self, *args, **kwargs) -> Any:
         raise NotImplementedError("create_comm_overlap - not implemented in reference backend")

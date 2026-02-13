@@ -10,12 +10,15 @@ import torch
 from ...ops import TEFLBackendBase, FP8TensorMeta, NVTE_Fused_Attn_Backend
 
 from .impl import (
-    rmsnorm_fwd_fl, rmsnorm_bwd_fl,
-    multi_tensor_scale_fl, multi_tensor_adam_fl,
+    rmsnorm_fwd_fl,
+    rmsnorm_bwd_fl,
+    multi_tensor_scale_fl,
+    multi_tensor_adam_fl,
     multi_tensor_adam_param_remainder_fl,
     multi_tensor_l2_norm_fl,
-    generic_gemm_fl
+    generic_gemm_fl,
 )
+
 
 def _check_flagos_available() -> bool:
     return True
@@ -31,11 +34,13 @@ class FlagOSBackend(TEFLBackendBase):
 
     def get_flash_attention_class(self):
         from .attention.dot_product_attention.backends import FlashAttentionFL
+
         return FlashAttentionFL
 
     def get_attention_backend(self, attention_params=None):
         from packaging.version import Version as PkgVersion
         from ...logger_manager import get_logger
+
         logger = get_logger()
 
         # Read environment variables to determine which backends to enable
@@ -91,12 +96,28 @@ class FlagOSBackend(TEFLBackendBase):
         beta: Optional[float] = None,
     ) -> Any:
         return generic_gemm_fl(
-            A, transA, B, transB, D, quantizer, output_dtype,
-            bias, bias_type, gelu, gelu_in, grad,
-            workspace, workspace_size, accumulate, use_split_accumulator,
-            comm_overlap=comm_overlap, comm_type=comm_type,
-            extra_output=extra_output, bulk_overlap=bulk_overlap,
-            alpha=alpha, beta=beta
+            A,
+            transA,
+            B,
+            transB,
+            D,
+            quantizer,
+            output_dtype,
+            bias,
+            bias_type,
+            gelu,
+            gelu_in,
+            grad,
+            workspace,
+            workspace_size,
+            accumulate,
+            use_split_accumulator,
+            comm_overlap=comm_overlap,
+            comm_type=comm_type,
+            extra_output=extra_output,
+            bulk_overlap=bulk_overlap,
+            alpha=alpha,
+            beta=beta,
         )
 
     def rmsnorm_fwd(
@@ -111,9 +132,14 @@ class FlagOSBackend(TEFLBackendBase):
         zero_centered_gamma: bool,
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor], torch.Tensor]:
         return rmsnorm_fwd_fl(
-            input=input, weight=weight, eps=eps, ln_out=ln_out,
-            quantizer=quantizer, odtype=otype,
-            sm_margin=sm_margin, zero_centered_gamma=zero_centered_gamma,
+            input=input,
+            weight=weight,
+            eps=eps,
+            ln_out=ln_out,
+            quantizer=quantizer,
+            odtype=otype,
+            sm_margin=sm_margin,
+            zero_centered_gamma=zero_centered_gamma,
         )
 
     def rmsnorm_bwd(
@@ -127,8 +153,13 @@ class FlagOSBackend(TEFLBackendBase):
         eps: float = 1e-5,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         return rmsnorm_bwd_fl(
-            dy=dy, x=x, rsigma=rsigma, gamma=gamma,
-            sm_margin=sm_margin, zero_centered_gamma=zero_centered_gamma, eps=eps,
+            dy=dy,
+            x=x,
+            rsigma=rsigma,
+            gamma=gamma,
+            sm_margin=sm_margin,
+            zero_centered_gamma=zero_centered_gamma,
+            eps=eps,
         )
 
     def multi_tensor_scale(
@@ -167,9 +198,17 @@ class FlagOSBackend(TEFLBackendBase):
         if chunk_size is None:
             return multi_tensor_adam_fl
         return multi_tensor_adam_fl(
-            chunk_size=chunk_size, noop_flag=noop_flag, tensor_lists=tensor_lists,
-            lr=lr, beta1=beta1, beta2=beta2, eps=eps,
-            step=step, mode=mode, bias_correction=bias_correction, weight_decay=weight_decay,
+            chunk_size=chunk_size,
+            noop_flag=noop_flag,
+            tensor_lists=tensor_lists,
+            lr=lr,
+            beta1=beta1,
+            beta2=beta2,
+            eps=eps,
+            step=step,
+            mode=mode,
+            bias_correction=bias_correction,
+            weight_decay=weight_decay,
         )
 
     def multi_tensor_adam_param_remainder(
@@ -189,9 +228,17 @@ class FlagOSBackend(TEFLBackendBase):
         if chunk_size is None:
             return multi_tensor_adam_param_remainder_fl
         return multi_tensor_adam_param_remainder_fl(
-            chunk_size=chunk_size, noop_flag=noop_flag, tensor_lists=tensor_lists,
-            lr=lr, beta1=beta1, beta2=beta2, eps=eps,
-            step=step, mode=mode, bias_correction=bias_correction, weight_decay=weight_decay,
+            chunk_size=chunk_size,
+            noop_flag=noop_flag,
+            tensor_lists=tensor_lists,
+            lr=lr,
+            beta1=beta1,
+            beta2=beta2,
+            eps=eps,
+            step=step,
+            mode=mode,
+            bias_correction=bias_correction,
+            weight_decay=weight_decay,
         )
 
     def get_cublasLt_version(self) -> int:
@@ -208,4 +255,3 @@ class FlagOSBackend(TEFLBackendBase):
 
     def create_fp8_tensor_meta(self) -> FP8TensorMeta:
         return FP8TensorMeta()
-

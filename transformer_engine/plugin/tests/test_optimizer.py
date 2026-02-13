@@ -17,7 +17,7 @@ class OptimizerTests(TestCase):
     def __init__(self, device="cpu"):
         super().__init__(
             "Optimizer Operations",
-            "Test correctness of multi_tensor optimizer operations across backends"
+            "Test correctness of multi_tensor optimizer operations across backends",
         )
         self.backends = get_available_backends()
         self.device = device
@@ -39,8 +39,10 @@ class OptimizerTests(TestCase):
             backend = get_backend(backend_name)
             try:
                 # Create input tensors
-                input_tensors = [generate_random_tensor(shape, dtype=torch.float32, device=self.device)
-                                 for _ in range(num_tensors)]
+                input_tensors = [
+                    generate_random_tensor(shape, dtype=torch.float32, device=self.device)
+                    for _ in range(num_tensors)
+                ]
                 # Create output tensors (will be filled by the function)
                 output_tensors = [torch.empty_like(t) for t in input_tensors]
                 # Create reference tensors
@@ -52,14 +54,17 @@ class OptimizerTests(TestCase):
                     chunk_size=2048,
                     noop_flag=noop_flag,
                     tensor_lists=[input_tensors, output_tensors],
-                    scale=scale
+                    scale=scale,
                 )
 
                 # Compare results
                 for i, (output, reference) in enumerate(zip(output_tensors, ref_tensors)):
                     self.assert_close(
-                        output, reference, rtol=1e-5, atol=1e-7,
-                        msg=f"multi_tensor_scale tensor {i} mismatch for {backend_name}"
+                        output,
+                        reference,
+                        rtol=1e-5,
+                        atol=1e-7,
+                        msg=f"multi_tensor_scale tensor {i} mismatch for {backend_name}",
                     )
                 print(f"    ✓ {backend_name}")
             except NotImplementedError:
@@ -75,8 +80,10 @@ class OptimizerTests(TestCase):
         for backend_name in self.backends:
             backend = get_backend(backend_name)
             try:
-                tensors = [generate_random_tensor(shape, dtype=torch.float32, device=self.device)
-                           for _ in range(num_tensors)]
+                tensors = [
+                    generate_random_tensor(shape, dtype=torch.float32, device=self.device)
+                    for _ in range(num_tensors)
+                ]
 
                 # Reference computation
                 ref_norm = self._reference_multi_tensor_l2norm(tensors, per_tensor=False)
@@ -84,10 +91,7 @@ class OptimizerTests(TestCase):
                 # Backend computation
                 noop_flag = torch.tensor([0], dtype=torch.int32, device=self.device)
                 output_norm = backend.multi_tensor_l2norm(
-                    chunk_size=2048,
-                    noop_flag=noop_flag,
-                    tensor_lists=[tensors],
-                    per_tensor=False
+                    chunk_size=2048, noop_flag=noop_flag, tensor_lists=[tensors], per_tensor=False
                 )
 
                 # CUDA backend returns tuple (norm, per_tensor_norms), extract the first element
@@ -95,8 +99,11 @@ class OptimizerTests(TestCase):
                     output_norm = output_norm[0]
 
                 self.assert_close(
-                    output_norm, ref_norm, rtol=1e-4, atol=1e-6,
-                    msg=f"multi_tensor_l2norm total norm mismatch for {backend_name}"
+                    output_norm,
+                    ref_norm,
+                    rtol=1e-4,
+                    atol=1e-6,
+                    msg=f"multi_tensor_l2norm total norm mismatch for {backend_name}",
                 )
                 print(f"    ✓ {backend_name}")
             except NotImplementedError:
@@ -107,13 +114,18 @@ class OptimizerTests(TestCase):
                 print(f"    ✗ {backend_name}: {e}")
 
     def test_multi_tensor_l2norm_per_tensor(self, num_tensors=4, shape=(64, 128)):
-        print(f"\n  Testing multi_tensor_l2norm per_tensor with {num_tensors} tensors of shape {shape}")
+        print(
+            f"\n  Testing multi_tensor_l2norm per_tensor with {num_tensors} tensors of shape"
+            f" {shape}"
+        )
 
         for backend_name in self.backends:
             backend = get_backend(backend_name)
             try:
-                tensors = [generate_random_tensor(shape, dtype=torch.float32, device=self.device)
-                           for _ in range(num_tensors)]
+                tensors = [
+                    generate_random_tensor(shape, dtype=torch.float32, device=self.device)
+                    for _ in range(num_tensors)
+                ]
 
                 # Reference computation
                 ref_norms = self._reference_multi_tensor_l2norm(tensors, per_tensor=True)
@@ -121,10 +133,7 @@ class OptimizerTests(TestCase):
                 # Backend computation
                 noop_flag = torch.tensor([0], dtype=torch.int32, device=self.device)
                 output_norms = backend.multi_tensor_l2norm(
-                    chunk_size=2048,
-                    noop_flag=noop_flag,
-                    tensor_lists=[tensors],
-                    per_tensor=True
+                    chunk_size=2048, noop_flag=noop_flag, tensor_lists=[tensors], per_tensor=True
                 )
 
                 # CUDA backend returns tuple (total_norm, per_tensor_norms), extract second element
@@ -133,8 +142,11 @@ class OptimizerTests(TestCase):
 
                 for i, (output, reference) in enumerate(zip(output_norms, ref_norms)):
                     self.assert_close(
-                        output, reference, rtol=1e-4, atol=1e-6,
-                        msg=f"multi_tensor_l2norm per_tensor {i} mismatch for {backend_name}"
+                        output,
+                        reference,
+                        rtol=1e-4,
+                        atol=1e-6,
+                        msg=f"multi_tensor_l2norm per_tensor {i} mismatch for {backend_name}",
                     )
                 print(f"    ✓ {backend_name}")
             except NotImplementedError:
@@ -158,10 +170,14 @@ class OptimizerTests(TestCase):
             backend = get_backend(backend_name)
             try:
                 # Create tensors for backend test
-                params = [generate_random_tensor(shape, dtype=torch.float32, device=self.device)
-                          for _ in range(num_tensors)]
-                grads = [generate_random_tensor(shape, dtype=torch.float32, device=self.device)
-                         for _ in range(num_tensors)]
+                params = [
+                    generate_random_tensor(shape, dtype=torch.float32, device=self.device)
+                    for _ in range(num_tensors)
+                ]
+                grads = [
+                    generate_random_tensor(shape, dtype=torch.float32, device=self.device)
+                    for _ in range(num_tensors)
+                ]
                 exp_avgs = [torch.zeros_like(p) for p in params]
                 exp_avg_sqs = [torch.zeros_like(p) for p in params]
 
@@ -172,8 +188,8 @@ class OptimizerTests(TestCase):
                 ref_exp_avg_sqs = [torch.zeros_like(p) for p in params]
 
                 # Apply reference Adam step (matching the torch implementation)
-                bias_correction1 = 1 - beta1 ** step
-                bias_correction2 = 1 - beta2 ** step
+                bias_correction1 = 1 - beta1**step
+                bias_correction2 = 1 - beta2**step
 
                 for p, g, m, v in zip(ref_params, ref_grads, ref_exp_avgs, ref_exp_avg_sqs):
                     # AdamW style: weight decay applied to param first
@@ -205,14 +221,17 @@ class OptimizerTests(TestCase):
                     step=step,
                     mode=1,  # AdamW mode
                     bias_correction=1,
-                    weight_decay=weight_decay
+                    weight_decay=weight_decay,
                 )
 
                 # Compare results with relaxed tolerance
                 for i, (output, reference) in enumerate(zip(params, ref_params)):
                     self.assert_close(
-                        output, reference, rtol=1e-3, atol=1e-5,
-                        msg=f"multi_tensor_adam param {i} mismatch for {backend_name}"
+                        output,
+                        reference,
+                        rtol=1e-3,
+                        atol=1e-5,
+                        msg=f"multi_tensor_adam param {i} mismatch for {backend_name}",
                     )
                 print(f"    ✓ {backend_name}")
             except NotImplementedError:
@@ -238,18 +257,24 @@ class OptimizerTests(TestCase):
             return torch.sqrt(total_norm_sq)
 
     def test_multi_tensor_unscale_l2norm(self, num_tensors=4, shape=(64, 128)):
-        print(f"\n  Testing multi_tensor_unscale_l2norm with {num_tensors} tensors of shape {shape}")
+        print(
+            f"\n  Testing multi_tensor_unscale_l2norm with {num_tensors} tensors of shape {shape}"
+        )
 
         # Note: scale parameter is actually inv_scale (1/loss_scale)
         # For AMP with loss_scale=1024, inv_scale would be 1/1024
         inv_scale_value = 0.5  # equivalent to loss_scale = 2.0
-        tensors = [generate_random_tensor(shape, dtype=torch.float32, device=self.device)
-                   for _ in range(num_tensors)]
+        tensors = [
+            generate_random_tensor(shape, dtype=torch.float32, device=self.device)
+            for _ in range(num_tensors)
+        ]
         noop_flag = torch.tensor([0], dtype=torch.int32, device=self.device)
         inv_scale = torch.tensor([inv_scale_value], dtype=torch.float32, device=self.device)
 
         # Compute mathematical reference
-        reference_norm = self._reference_multi_tensor_unscale_l2norm(tensors, inv_scale, per_tensor=False)
+        reference_norm = self._reference_multi_tensor_unscale_l2norm(
+            tensors, inv_scale, per_tensor=False
+        )
 
         for backend_name in self.backends:
             backend = get_backend(backend_name)
@@ -259,7 +284,7 @@ class OptimizerTests(TestCase):
                     noop_flag=noop_flag,
                     tensor_lists=[tensors],
                     scale=inv_scale,
-                    per_tensor=False
+                    per_tensor=False,
                 )
 
                 # CUDA backend returns tuple (norm, per_tensor_norms), extract the first element
@@ -267,8 +292,11 @@ class OptimizerTests(TestCase):
                     output_norm = output_norm[0]
 
                 self.assert_close(
-                    output_norm, reference_norm, rtol=1e-4, atol=1e-6,
-                    msg=f"multi_tensor_unscale_l2norm mismatch for {backend_name}"
+                    output_norm,
+                    reference_norm,
+                    rtol=1e-4,
+                    atol=1e-6,
+                    msg=f"multi_tensor_unscale_l2norm mismatch for {backend_name}",
                 )
                 print(f"    ✓ {backend_name}")
             except NotImplementedError:
@@ -279,9 +307,9 @@ class OptimizerTests(TestCase):
                 print(f"    ✗ {backend_name}: {e}")
 
     def run_all_tests(self):
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("Testing Optimizer Operations")
-        print("="*60)
+        print("=" * 60)
         print(f"Available backends: {', '.join(self.backends)}")
 
         # multi_tensor_scale tests

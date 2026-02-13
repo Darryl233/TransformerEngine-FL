@@ -10,15 +10,18 @@ import torch
 
 from ....ops import TEFLBackendBase, FP8TensorMeta, NVTE_Fused_Attn_Backend
 
+
 def _load_hygon_libs():
     import ctypes
     from pathlib import Path
     import importlib
     import platform
+
     common_prefix = "libtransformer_engine"
     csrc_prefix = "transformer_engine_torch_hygon"
     common_files = []
     csrc_files = []
+
     def _get_sys_extension() -> str:
         system = platform.system()
         if system == "Linux":
@@ -28,6 +31,7 @@ def _load_hygon_libs():
         if system == "Windows":
             return ".dll"
         raise RuntimeError(f"Unsupported operating system ({system})")
+
     try:
         if bool(int(os.environ.get("TE_FL_SKIP_HYGON", "0"))):
             return False
@@ -55,7 +59,9 @@ def _load_hygon_libs():
         print(f"[HYGON] Failed to load hygon libs: {e}")
         return False
 
+
 _hygon_libs_loaded = False
+
 
 def _ensure_hygon_libs():
     global _hygon_libs_loaded
@@ -63,31 +69,40 @@ def _ensure_hygon_libs():
         _hygon_libs_loaded = _load_hygon_libs()
     return _hygon_libs_loaded
 
+
 def _check_hygon_available() -> bool:
     try:
         if not _ensure_hygon_libs():
             return False
         import transformer_engine_torch_hygon
+
         return True
     except (ImportError, OSError) as e:
         print(f"[HYGON] Import failed: {e}")
         return False
 
+
 def _get_tex():
     _ensure_hygon_libs()
     import transformer_engine_torch_hygon
+
     return transformer_engine_torch_hygon
+
 
 def _torch_dtype_to_te_dtype(torch_dtype, tex_module):
     if torch_dtype is None:
         return None
 
     NativeDType = tex_module.DType
-    if type(torch_dtype).__name__ == 'DType' and type(torch_dtype).__module__ == 'transformer_engine_torch_hygon':
+    if (
+        type(torch_dtype).__name__ == "DType"
+        and type(torch_dtype).__module__ == "transformer_engine_torch_hygon"
+    ):
         return torch_dtype
 
-    if hasattr(torch_dtype, 'name') and hasattr(torch_dtype, 'value'):
+    if hasattr(torch_dtype, "name") and hasattr(torch_dtype, "value"):
         from transformer_engine.plugin.core.ops import DType as PyDType
+
         if isinstance(torch_dtype, PyDType):
             dtype_name = torch_dtype.name
             if hasattr(NativeDType, dtype_name):
@@ -101,12 +116,13 @@ def _torch_dtype_to_te_dtype(torch_dtype, tex_module):
         torch.uint8: NativeDType.kByte,
     }
 
-    if hasattr(torch, 'float8_e4m3fn'):
+    if hasattr(torch, "float8_e4m3fn"):
         dtype_map[torch.float8_e4m3fn] = NativeDType.kFloat8E4M3
-    if hasattr(torch, 'float8_e5m2'):
+    if hasattr(torch, "float8_e5m2"):
         dtype_map[torch.float8_e5m2] = NativeDType.kFloat8E5M2
 
     return dtype_map.get(torch_dtype, torch_dtype)
+
 
 def _convert_dtype_params(func):
     import functools
@@ -114,7 +130,7 @@ def _convert_dtype_params(func):
 
     @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
-        dtype_params = ['otype', 'output_dtype', 'bias_type']
+        dtype_params = ["otype", "output_dtype", "bias_type"]
 
         from transformer_engine.plugin.core.ops import DType as PyDType
 
@@ -141,6 +157,7 @@ def _convert_dtype_params(func):
 
     return wrapper
 
+
 class HygonBackend(TEFLBackendBase):
     @staticmethod
     def check_available() -> bool:
@@ -162,11 +179,13 @@ class HygonBackend(TEFLBackendBase):
 
     def get_flash_attention_class(self):
         from .flash_attention import FlashAttentionHYGON
+
         return FlashAttentionHYGON
 
     def get_attention_backend(self, attention_params=None):
         from packaging.version import Version as PkgVersion
         from ....logger_manager import get_logger
+
         logger = get_logger()
 
         # Read environment variables to determine which backends to enable
@@ -255,10 +274,28 @@ class HygonBackend(TEFLBackendBase):
             bias_type = self._to_te_dtype(torch.bfloat16)
 
         return tex.generic_gemm(
-            A, transA, B, transB, D, quantizer, output_dtype,
-            bias, bias_type, gelu, gelu_in, grad, workspace, workspace_size,
-            accumulate, use_split_accumulator, comm_overlap, comm_type,
-            extra_output, bulk_overlap, alpha, beta
+            A,
+            transA,
+            B,
+            transB,
+            D,
+            quantizer,
+            output_dtype,
+            bias,
+            bias_type,
+            gelu,
+            gelu_in,
+            grad,
+            workspace,
+            workspace_size,
+            accumulate,
+            use_split_accumulator,
+            comm_overlap,
+            comm_type,
+            extra_output,
+            bulk_overlap,
+            alpha,
+            beta,
         )
 
     def te_general_grouped_gemm(self, *args, **kwargs) -> Any:
@@ -326,7 +363,7 @@ class HygonBackend(TEFLBackendBase):
     def dqgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dqgelu(grad, fwd_input, quantizer)
-    
+
     def dqgeglu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Any:
         tex = self._get_tex()
         return tex.dqgeglu(grad, fwd_input, quantizer)
@@ -366,23 +403,33 @@ class HygonBackend(TEFLBackendBase):
         tex = self._get_tex()
         return tex.clamped_dswiglu(grad, fwd_input, quantizer, limit, alpha)
 
-    def dbias_dgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dgelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dgelu(grad, fwd_input, quantizer)
 
-    def dbias_dsilu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dsilu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dsilu(grad, fwd_input, quantizer)
 
-    def dbias_drelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_drelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_drelu(grad, fwd_input, quantizer)
 
-    def dbias_dqgelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dqgelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dqgelu(grad, fwd_input, quantizer)
 
-    def dbias_dsrelu(self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any) -> Tuple[torch.Tensor, Any]:
+    def dbias_dsrelu(
+        self, grad: torch.Tensor, fwd_input: torch.Tensor, quantizer: Any
+    ) -> Tuple[torch.Tensor, Any]:
         tex = self._get_tex()
         return tex.dbias_dsrelu(grad, fwd_input, quantizer)
 
@@ -430,7 +477,9 @@ class HygonBackend(TEFLBackendBase):
             dy = dy.view(-1, dy.shape[-1])
             x = x.view(-1, x.shape[-1])
 
-        dx, dgamma, dbeta = tex.layernorm_bwd(dy, x, mu, rsigma, gamma, sm_margin, zero_centered_gamma)
+        dx, dgamma, dbeta = tex.layernorm_bwd(
+            dy, x, mu, rsigma, gamma, sm_margin, zero_centered_gamma
+        )
 
         if len(orig_shape) > 2:
             dx = dx.view(*orig_shape)
@@ -647,8 +696,14 @@ class HygonBackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.fused_topk_with_score_function_fwd(
-            logits, topk, use_pre_softmax, num_groups, group_topk,
-            scaling_factor, score_function, expert_bias
+            logits,
+            topk,
+            use_pre_softmax,
+            num_groups,
+            group_topk,
+            scaling_factor,
+            score_function,
+            expert_bias,
         )
 
     def fused_topk_with_score_function_bwd(
@@ -665,8 +720,15 @@ class HygonBackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.fused_topk_with_score_function_bwd(
-            num_tokens, num_experts, routing_map, intermediate_output,
-            grad_probs, topk, use_pre_softmax, scaling_factor, score_function
+            num_tokens,
+            num_experts,
+            routing_map,
+            intermediate_output,
+            grad_probs,
+            topk,
+            use_pre_softmax,
+            scaling_factor,
+            score_function,
         )
 
     def fused_score_for_moe_aux_loss_fwd(
@@ -705,8 +767,7 @@ class HygonBackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.fused_moe_aux_loss_fwd(
-            probs, tokens_per_expert, total_num_tokens, num_experts,
-            num_rows, num_cols, topk, coeff
+            probs, tokens_per_expert, total_num_tokens, num_experts, num_rows, num_cols, topk, coeff
         )
 
     def fused_moe_aux_loss_bwd(
@@ -796,7 +857,9 @@ class HygonBackend(TEFLBackendBase):
         out_dtype: Any,
     ) -> None:
         tex = self._get_tex()
-        tex.fp8_block_scaling_partial_cast(inp, out, scale, h, w, start_offset, block_len, out_dtype)
+        tex.fp8_block_scaling_partial_cast(
+            inp, out, scale, h, w, start_offset, block_len, out_dtype
+        )
 
     def fused_multi_row_padding(self, *args, **kwargs) -> Any:
         tex = self._get_tex()
@@ -849,10 +912,14 @@ class HygonBackend(TEFLBackendBase):
         raise NotImplementedError("create_nvshmem_tensor - not implemented in hygon backend")
 
     def nvshmem_send_on_current_stream(self, *args, **kwargs) -> None:
-        raise NotImplementedError("nvshmem_send_on_current_stream - not implemented in hygon backend")
+        raise NotImplementedError(
+            "nvshmem_send_on_current_stream - not implemented in hygon backend"
+        )
 
     def nvshmem_wait_on_current_stream(self, *args, **kwargs) -> None:
-        raise NotImplementedError("nvshmem_wait_on_current_stream - not implemented in hygon backend")
+        raise NotImplementedError(
+            "nvshmem_wait_on_current_stream - not implemented in hygon backend"
+        )
 
     def nvshmem_finalize(self) -> None:
         raise NotImplementedError("nvshmem_finalize - not implemented in hygon backend")
@@ -886,7 +953,9 @@ class HygonBackend(TEFLBackendBase):
         per_tensor: bool = False,
     ) -> Union[torch.Tensor, List[torch.Tensor]]:
         tex = self._get_tex()
-        return tex.multi_tensor_unscale_l2norm(chunk_size, noop_flag, tensor_lists, scale, per_tensor)
+        return tex.multi_tensor_unscale_l2norm(
+            chunk_size, noop_flag, tensor_lists, scale, per_tensor
+        )
 
     def multi_tensor_adam(
         self,
@@ -906,8 +975,17 @@ class HygonBackend(TEFLBackendBase):
         if chunk_size is None:
             return tex.multi_tensor_adam
         tex.multi_tensor_adam(
-            chunk_size, noop_flag, tensor_lists, lr, beta1, beta2,
-            eps, step, mode, bias_correction, weight_decay
+            chunk_size,
+            noop_flag,
+            tensor_lists,
+            lr,
+            beta1,
+            beta2,
+            eps,
+            step,
+            mode,
+            bias_correction,
+            weight_decay,
         )
 
     def multi_tensor_adam_param_remainder(self, *args, **kwargs) -> None:
@@ -941,7 +1019,9 @@ class HygonBackend(TEFLBackendBase):
         recv_stream: Any,
     ) -> Any:
         tex = self._get_tex()
-        return tex.bulk_overlap_ag_with_external_gemm(allgather_communicator, send_stream, recv_stream)
+        return tex.bulk_overlap_ag_with_external_gemm(
+            allgather_communicator, send_stream, recv_stream
+        )
 
     def create_fp8_tensor_meta(self) -> FP8TensorMeta:
         tex = self._get_tex()
@@ -975,10 +1055,19 @@ class HygonBackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.CommOverlap(
-            buffer_shape, buffer_dtype, helper, tp_size,
-            num_splits, num_max_streams, comm_cga_size,
-            gemm_priority, comm_priority, num_comm_sm,
-            set_sm_margin, atomic_gemm, rs_overlap_first_gemm
+            buffer_shape,
+            buffer_dtype,
+            helper,
+            tp_size,
+            num_splits,
+            num_max_streams,
+            comm_cga_size,
+            gemm_priority,
+            comm_priority,
+            num_comm_sm,
+            set_sm_margin,
+            atomic_gemm,
+            rs_overlap_first_gemm,
         )
 
     def create_comm_overlap_p2p(
@@ -1000,7 +1089,18 @@ class HygonBackend(TEFLBackendBase):
     ) -> Any:
         tex = self._get_tex()
         return tex.CommOverlapP2P(
-            buffer_shape, buffer_dtype, helper, tp_size, comm_type,
-            num_max_streams, comm_cga_size, gemm_priority, comm_priority,
-            num_comm_sm, set_sm_margin, atomic_gemm, use_ce, aggregate
+            buffer_shape,
+            buffer_dtype,
+            helper,
+            tp_size,
+            comm_type,
+            num_max_streams,
+            comm_cga_size,
+            gemm_priority,
+            comm_priority,
+            num_comm_sm,
+            set_sm_margin,
+            atomic_gemm,
+            use_ce,
+            aggregate,
         )

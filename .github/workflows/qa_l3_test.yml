@@ -3,7 +3,7 @@ name: QA L3 Tests
 on:
   push:
     branches:
-      - main
+      - test-ye
   pull_request:
     branches:
       - main

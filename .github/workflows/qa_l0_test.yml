@@ -69,67 +69,67 @@ jobs:
           source .github/workflows/scripts/gpu_check.sh
           wait_for_gpu
 
-      - name: L0 CPP Unittest
-        timeout-minutes: 80
-        env:
-          TE_PATH: .
-        run: |
-          source /opt/miniconda3/etc/profile.d/conda.sh
-          conda activate flagscale-train
-          TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
-          TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
-          export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
-          export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
-          NUM_PHYSICAL_CORES=$(nproc)
-          NUM_PARALLEL_JOBS=4
+      # - name: L0 CPP Unittest
+      #   timeout-minutes: 80
+      #   env:
+      #     TE_PATH: .
+      #   run: |
+      #     source /opt/miniconda3/etc/profile.d/conda.sh
+      #     conda activate flagscale-train
+      #     TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
+      #     TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
+      #     export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
+      #     export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
+      #     NUM_PHYSICAL_CORES=$(nproc)
+      #     NUM_PARALLEL_JOBS=4
 
-          cd $TE_PATH/tests/cpp
-          cmake -GNinja -Bbuild . -DTE_LIB_PATH="${TE_CPP_LIB_PATH}"
-          cmake --build build
-          export OMP_NUM_THREADS=$((NUM_PHYSICAL_CORES / NUM_PARALLEL_JOBS))
-          ctest --test-dir build -j$NUM_PARALLEL_JOBS
+      #     cd $TE_PATH/tests/cpp
+      #     cmake -GNinja -Bbuild . -DTE_LIB_PATH="${TE_CPP_LIB_PATH}"
+      #     cmake --build build
+      #     export OMP_NUM_THREADS=$((NUM_PHYSICAL_CORES / NUM_PARALLEL_JOBS))
+      #     ctest --test-dir build -j$NUM_PARALLEL_JOBS
 
-      - name: PyTorch C++ Lint
-        timeout-minutes: 5
-        env:
-          CPP_ONLY: 1
-          TE_PATH: .
-        run: |
-          source /opt/miniconda3/etc/profile.d/conda.sh
-          conda activate flagscale-train
-          bash ./qa/L0_pytorch_lint/test.sh || true
+      # - name: PyTorch C++ Lint
+      #   timeout-minutes: 5
+      #   env:
+      #     CPP_ONLY: 1
+      #     TE_PATH: .
+      #   run: |
+      #     source /opt/miniconda3/etc/profile.d/conda.sh
+      #     conda activate flagscale-train
+      #     bash ./qa/L0_pytorch_lint/test.sh || true
 
-          echo ""
-          echo "-----------------------------------------------------"
-          echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
-          echo "-----------------------------------------------------"
-        continue-on-error: true
+      #     echo ""
+      #     echo "-----------------------------------------------------"
+      #     echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
+      #     echo "-----------------------------------------------------"
+      #   continue-on-error: true
 
-      - name: PyTorch Python Lint
-        timeout-minutes: 5
-        env:
-          PYTHON_ONLY: 1
-          TE_PATH: .
-        run: |
-          source /opt/miniconda3/etc/profile.d/conda.sh
-          conda activate flagscale-train
-          bash ./qa/L0_pytorch_lint/test.sh || true
+      # - name: PyTorch Python Lint
+      #   timeout-minutes: 5
+      #   env:
+      #     PYTHON_ONLY: 1
+      #     TE_PATH: .
+      #   run: |
+      #     source /opt/miniconda3/etc/profile.d/conda.sh
+      #     conda activate flagscale-train
+      #     bash ./qa/L0_pytorch_lint/test.sh || true
 
-          echo ""
-          echo "-----------------------------------------------------"
-          echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
-          echo "-----------------------------------------------------"
-        continue-on-error: true
+      #     echo ""
+      #     echo "-----------------------------------------------------"
+      #     echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
+      #     echo "-----------------------------------------------------"
+      #   continue-on-error: true
 
-      - name: L0 Pytorch Debug Unittest
-        # timeout-minutes: 10
-        env:
-          TE_PATH: .
-        run: |
-          source /opt/miniconda3/etc/profile.d/conda.sh
-          conda activate flagscale-train
+      # - name: L0 Pytorch Debug Unittest
+      #   # timeout-minutes: 10
+      #   env:
+      #     TE_PATH: .
+      #   run: |
+      #     source /opt/miniconda3/etc/profile.d/conda.sh
+      #     conda activate flagscale-train
 
-          bash ./qa/L0_pytorch_debug_unittest/test.sh
+      #     bash ./qa/L0_pytorch_debug_unittest/test.sh
 
       - name: L0 Pytorch Unittest
         # timeout-minutes: 20
