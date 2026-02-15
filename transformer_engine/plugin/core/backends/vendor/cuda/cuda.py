@@ -65,7 +65,11 @@ def _load_cuda_libs():
         try_load_lib("nvrtc", [f"libnvrtc{ext}*"])
         try_load_lib("curand", [f"libcurand{ext}*"])
 
-        te_path = Path(importlib.util.find_spec("transformer_engine").origin).parent.parent
+        te_path_override = os.environ.get("TE_LIB_PATH")
+        if te_path_override:
+            te_path = Path(te_path_override)
+        else:
+            te_path = Path(importlib.util.find_spec("transformer_engine").origin).parent.parent
         for search_dir in [te_path, te_path / "transformer_engine"]:
             if search_dir.exists():
                 matches = list(search_dir.glob(f"libtransformer_engine{ext}*"))

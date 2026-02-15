@@ -117,10 +117,13 @@ jobs:
           XML_LOG_DIR: "/logs/pytorch/thunder"
           THUNDER_PATH: "lightning-thunder"
           TE_PATH: .
+          TE_FL_PREFER: vendor
         run: |
           # Activate conda environment
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
+
+          export TE_LIB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/transformer_engine
 
           # Run thunder integration tests
           echo "=== Running L1 PyTorch Thunder Integration Tests ==="
@@ -132,10 +135,13 @@ jobs:
         env:
           XML_LOG_DIR: "/logs/pytorch/distributed"
           TE_PATH: .
+          TE_FL_PREFER: vendor
         run: |
           # Activate conda environment
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
+
+          export TE_LIB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/transformer_engine
 
           # Run distributed unit tests
           echo "=== Running L1 PyTorch Distributed Unit Tests ==="
@@ -146,10 +152,13 @@ jobs:
         env:
           XML_LOG_DIR: "/logs/pytorch/onnx"
           TE_PATH: .
+          TE_FL_PREFER: vendor
         run: |
           # Activate conda environment
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
+
+          export TE_LIB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/transformer_engine
 
           # Run ONNX unit tests
           echo "=== Running L1 PyTorch ONNX Unit Tests ==="
