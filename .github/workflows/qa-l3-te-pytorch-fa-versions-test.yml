@@ -1,14 +1,15 @@
+# disabled for requireing hopper or higher Compute Capabilities GPUs
 name: QA L3 - Attention Tests 
 
 on:
   push:
-    branches: main
+    branches: __disable__
     paths:
       - '.github/workflows/qa-l3-te-pytorch-fa-versions-test.yml'
       - 'tests/pytorch/attention/test_attention.py'
 
   pull_request:
-    branches: main
+    branches: __disable__
     paths:
       - '.github/workflows/qa-l3-te-pytorch-fa-versions-test.yml'
       - 'tests/pytorch/attention/test_attention.py'
