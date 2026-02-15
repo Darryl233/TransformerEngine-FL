@@ -3,10 +3,10 @@ name: QA Pytorch Wheel
 on:
   push:
     branches:
-      - main
+      - __disabled_do_not_remove__
   pull_request:
     branches:
-      - main
+      - __disabled_do_not_remove__
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ github.actor }}
