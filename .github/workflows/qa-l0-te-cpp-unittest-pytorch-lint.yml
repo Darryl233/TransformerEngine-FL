@@ -174,10 +174,13 @@ jobs:
         # timeout-minutes: 10
         env:
           TE_PATH: .
+          TE_FL_PREFER: vendor
         run: |
           # Activate conda environment
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
+          
+          export TE_LIB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/transformer_engine
 
           # Run core unit tests
           echo "=== Running L0 PyTorch Core Unit Tests ==="
