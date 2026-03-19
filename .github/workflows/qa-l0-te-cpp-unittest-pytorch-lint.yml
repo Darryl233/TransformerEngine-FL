@@ -178,3 +178,10 @@ jobs:
           # Run core unit tests
           echo "=== Running L0 PyTorch Core Unit Tests ==="
           bash ./qa/L0_pytorch_unittest/test.sh
+
+      - name: Sleep before stopping container on failure
+        if: failure()
+        run: |
+          echo "=== Workflow failed. Sleeping 48h to allow debugging before container stops ==="
+          echo "Container will remain running until $(date -d '+48 hours' 2>/dev/null || date -v+48H) ..."
+          sleep 172800
