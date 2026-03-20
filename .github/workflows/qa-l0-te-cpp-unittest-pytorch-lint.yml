@@ -22,7 +22,7 @@ concurrency:
 
 jobs:
   run-qa-l0-core-tests:
-    runs-on: [ self-hosted, Linux, X64, nvidia, gpu-8 ]
+    runs-on: [ dx4-nvidia-8gpu-v1 ]
     defaults:
       run:
         shell: bash
