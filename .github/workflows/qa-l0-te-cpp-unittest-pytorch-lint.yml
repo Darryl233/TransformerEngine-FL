@@ -31,15 +31,16 @@ jobs:
       ports:
         - 80:80
       options: >-
-        --gpus all 
-        --shm-size=500g 
-        --privileged 
-        --ipc=host 
-        --ulimit memlock=-1 
-        --ulimit stack=67108864 
-        --ulimit nofile=65535:65535 
+        --gpus all
+        --shm-size=500g
+        --privileged
+        --ipc=host
+        --ulimit memlock=-1
+        --ulimit stack=67108864
+        --ulimit nofile=65535:65535
         --user root
         --pull always
+        --volume /__w:/__w
     steps:
       - name: Checkout Code
         run: |
