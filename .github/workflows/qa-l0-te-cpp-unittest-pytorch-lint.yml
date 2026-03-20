@@ -31,6 +31,7 @@ jobs:
       ports:
         - 80:80
       options: >-
+        -v /home/runner/_work/${{ github.run_id }}:${{ github.workspace }}
         --gpus all
         --shm-size=500g
         --privileged
@@ -40,7 +41,6 @@ jobs:
         --ulimit nofile=65535:65535
         --user root
         --pull always
-        --volume /__w:/__w
     steps:
       - name: Checkout Code
         run: |
