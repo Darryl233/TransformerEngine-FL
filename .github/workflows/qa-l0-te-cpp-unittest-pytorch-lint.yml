@@ -30,15 +30,6 @@ jobs:
       DOCKER_IMAGE: harbor.baai.ac.cn/flagscale/cuda12.8.1-torch2.7.1-python3.10-te2.9:20260209
       CONTAINER_NAME: te-test-${{ github.run_id }}
     steps:
-      - name: Checkout Code
-        run: |
-          git clone --depth 1 --recurse-submodules \
-            https://github.com/${{ github.event.pull_request.head.repo.full_name || github.repository }}.git \
-            -b ${{ github.event.pull_request.head.ref || github.ref_name }} \
-            $GITHUB_WORKSPACE
-          cd $GITHUB_WORKSPACE
-          git config --global --add safe.directory $GITHUB_WORKSPACE
-
       - name: Start Docker Container
         run: |
           docker pull $DOCKER_IMAGE
@@ -52,10 +43,20 @@ jobs:
             --ulimit stack=67108864 \
             --ulimit nofile=65535:65535 \
             --user root \
-            -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
-            -w $GITHUB_WORKSPACE \
+            -e GITHUB_WORKSPACE=$GITHUB_WORKSPACE \
             $DOCKER_IMAGE \
             sleep infinity
+
+      - name: Checkout Code
+        run: |
+          docker exec -i $CONTAINER_NAME bash << 'EOF'
+          git clone --depth 1 --recurse-submodules \
+            https://github.com/${{ github.event.pull_request.head.repo.full_name || github.repository }}.git \
+            -b ${{ github.event.pull_request.head.ref || github.ref_name }} \
+            $GITHUB_WORKSPACE
+          cd $GITHUB_WORKSPACE
+          git config --global --add safe.directory $GITHUB_WORKSPACE
+          EOF
 
       - name: Install Dependencies & Build Transformer Engine
         # timeout-minutes: 40
