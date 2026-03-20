@@ -50,6 +50,9 @@ jobs:
             console.log('ref:', context.ref)
             console.log('sha:', context.sha)
 
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory '*'
+
       - name: Checkout Code
         uses: actions/checkout@v6.0.1
         with:
