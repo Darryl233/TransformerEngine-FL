@@ -61,6 +61,7 @@ jobs:
         # timeout-minutes: 40
         run: |
           docker exec -i \
+            -w $GITHUB_WORKSPACE \
             -e NVTE_FRAMEWORK=pytorch \
             -e TE_WITH_NCCL=1 \
             $CONTAINER_NAME bash << 'EOF'
@@ -84,7 +85,7 @@ jobs:
 
       - name: Verify GPU Availability & Health
         run: |
-          docker exec -i $CONTAINER_NAME bash << 'EOF'
+          docker exec -i -w $GITHUB_WORKSPACE $CONTAINER_NAME bash << 'EOF'
           echo "=== Checking GPU Status ==="
           source .github/workflows/scripts/gpu_check.sh
           wait_for_gpu
@@ -118,6 +119,7 @@ jobs:
         continue-on-error: true
         run: |
           docker exec -i \
+            -w $GITHUB_WORKSPACE \
             -e CPP_ONLY=1 \
             -e TE_PATH=. \
             $CONTAINER_NAME bash << 'EOF'
