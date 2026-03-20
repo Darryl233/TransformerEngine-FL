@@ -42,7 +42,7 @@ jobs:
     steps:
 
       - name: Configure git safe directory
-        run: git config --global --add safe.directory '*'
+        run: git config --system --add safe.directory '*'
 
       - name: Checkout Code
         uses: actions/checkout@v6.0.1
