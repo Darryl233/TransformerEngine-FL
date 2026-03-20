@@ -42,6 +42,14 @@ jobs:
         --user root
         --pull always
     steps:
+      - name: Test Action
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('workflow:', context.workflow)
+            console.log('ref:', context.ref)
+            console.log('sha:', context.sha)
+
       - name: Checkout Code
         uses: actions/checkout@v6.0.1
         with:
@@ -57,6 +65,7 @@ jobs:
           lfs: false
           submodules: recursive
           set-safe-directory: true
+
 
       - name: Install Dependencies & Build Transformer Engine
         # timeout-minutes: 40
