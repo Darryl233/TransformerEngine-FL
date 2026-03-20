@@ -141,6 +141,7 @@ jobs:
         continue-on-error: true
         run: |
           docker exec -i \
+            -w $GITHUB_WORKSPACE \
             -e PYTHON_ONLY=1 \
             -e TE_PATH=. \
             $CONTAINER_NAME bash << 'EOF'
@@ -160,6 +161,7 @@ jobs:
         # timeout-minutes: 10
         run: |
           docker exec -i \
+            -w $GITHUB_WORKSPACE \
             -e TE_PATH=. \
             $CONTAINER_NAME bash << 'EOF'
           source /opt/miniconda3/etc/profile.d/conda.sh
@@ -173,6 +175,7 @@ jobs:
         # timeout-minutes: 10
         run: |
           docker exec -i \
+            -w $GITHUB_WORKSPACE \
             -e TE_PATH=. \
             -e TE_FL_PREFER=vendor \
             $CONTAINER_NAME bash << 'EOF'
