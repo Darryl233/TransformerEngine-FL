@@ -30,6 +30,7 @@ jobs:
         - 80:80
       options: >-
         -v /home/runner/_work/${{ github.run_id }}:${{ github.workspace }}
+        -v /home/runner/externals:/__e
         --gpus all 
         --shm-size=500g 
         --privileged 
