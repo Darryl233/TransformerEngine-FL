@@ -42,20 +42,12 @@ jobs:
         --pull always
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6.0.1
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          ssh-strict: true
-          ssh-user: git
-          persist-credentials: true
-          clean: true
-          sparse-checkout-cone-mode: true
-          fetch-tags: false
-          show-progress: true
-          lfs: false
-          submodules: recursive
-          set-safe-directory: true
+        run: |
+          git clone --depth=1 --recurse-submodules \
+            https://x-access-token:${{ github.token }}@github.com/${{ github.event.pull_request.head.repo.full_name || github.repository }}.git \
+            --branch ${{ github.event.pull_request.head.ref || github.ref_name }} \
+            .
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Install Dependencies & Build Transformer Engine
         # timeout-minutes: 40
