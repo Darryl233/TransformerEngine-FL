@@ -26,20 +26,9 @@ jobs:
     defaults:
       run:
         shell: bash
-    container:
-      image: harbor.baai.ac.cn/flagscale/cuda12.8.1-torch2.7.1-python3.10-te2.9:20260209
-      ports:
-        - 80:80
-      options: >-
-        --gpus all 
-        --shm-size=500g 
-        --privileged 
-        --ipc=host 
-        --ulimit memlock=-1 
-        --ulimit stack=67108864 
-        --ulimit nofile=65535:65535 
-        --user root
-        --pull always
+    env:
+      DOCKER_IMAGE: harbor.baai.ac.cn/flagscale/cuda12.8.1-torch2.7.1-python3.10-te2.9:20260209
+      CONTAINER_NAME: te-test-${{ github.run_id }}
     steps:
       - name: Checkout Code
         run: |
@@ -50,12 +39,31 @@ jobs:
           cd $GITHUB_WORKSPACE
           git config --global --add safe.directory $GITHUB_WORKSPACE
 
+      - name: Start Docker Container
+        run: |
+          docker pull $DOCKER_IMAGE
+          docker run -d \
+            --name $CONTAINER_NAME \
+            --gpus all \
+            --shm-size=500g \
+            --privileged \
+            --ipc=host \
+            --ulimit memlock=-1 \
+            --ulimit stack=67108864 \
+            --ulimit nofile=65535:65535 \
+            --user root \
+            -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+            -w $GITHUB_WORKSPACE \
+            $DOCKER_IMAGE \
+            sleep infinity
+
       - name: Install Dependencies & Build Transformer Engine
         # timeout-minutes: 40
-        env:
-          NVTE_FRAMEWORK: pytorch
-          TE_WITH_NCCL: 1
         run: |
+          docker exec -i \
+            -e NVTE_FRAMEWORK=pytorch \
+            -e TE_WITH_NCCL=1 \
+            $CONTAINER_NAME bash << 'EOF'
           # Activate conda environment
           echo "=== Activating Conda Environment ==="
           source /opt/miniconda3/etc/profile.d/conda.sh
@@ -72,13 +80,15 @@ jobs:
           # Verify TE installation with version check
           echo "=== Verifying Transformer Engine Installation ==="
           python3 tests/pytorch/test_sanity_import.py
+          EOF
 
       - name: Verify GPU Availability & Health
         run: |
-          # Execute GPU check
+          docker exec -i $CONTAINER_NAME bash << 'EOF'
           echo "=== Checking GPU Status ==="
           source .github/workflows/scripts/gpu_check.sh
           wait_for_gpu
+          EOF
 
       # too heavy, disabled for now
       # - name: Run L0 C++ Unit Tests
@@ -86,41 +96,34 @@ jobs:
       #   env:
       #     TE_PATH: .
       #   run: |
-      #     # Activate conda environment
+      #     docker exec -i $CONTAINER_NAME bash << 'EOF'
       #     source /opt/miniconda3/etc/profile.d/conda.sh
       #     conda activate flagscale-train
-
-      #     # Get TE library paths with robust detection
       #     TE_LIB_PATH=$(pip3 show transformer-engine | grep -E "Location:|Editable project location:" | tail -n 1 | awk '{print $NF}')
       #     TE_CPP_LIB_PATH="${TE_LIB_PATH}/transformer_engine"
-
-      #     # Set environment variables for build
       #     export CMAKE_PREFIX_PATH="${TE_CPP_LIB_PATH}:${CMAKE_PREFIX_PATH}"
       #     export LD_LIBRARY_PATH="${TE_CPP_LIB_PATH}:${LD_LIBRARY_PATH}"
       #     NUM_PHYSICAL_CORES=$(nproc)
       #     NUM_PARALLEL_JOBS=$(nproc)
-
-      #     # Build and run C++ tests
-      #     cd $TE_PATH/tests/cpp
+      #     cd tests/cpp
       #     cmake -GNinja -Bbuild . -DTE_LIB_PATH="${TE_CPP_LIB_PATH}"
       #     cmake --build build
       #     export OMP_NUM_THREADS=$((NUM_PHYSICAL_CORES / NUM_PARALLEL_JOBS))
-
-      #     # Run C++ tests with verbose output
       #     echo "=== Running C++ Unit Tests ==="
       #     ctest --test-dir build -j$NUM_PARALLEL_JOBS
+      #     EOF
 
       - name: PyTorch C++ Lint
         # timeout-minutes: 5
-        env:
-          CPP_ONLY: 1
-          TE_PATH: .
+        continue-on-error: true
         run: |
-          # Activate conda environment
+          docker exec -i \
+            -e CPP_ONLY=1 \
+            -e TE_PATH=. \
+            $CONTAINER_NAME bash << 'EOF'
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
 
-          # Run C++ lint checks
           echo "=== Running C++ Lint Checks ==="
           bash ./qa/L0_pytorch_lint/test.sh || true
 
@@ -128,19 +131,19 @@ jobs:
           echo "-----------------------------------------------------"
           echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
           echo "-----------------------------------------------------"
-        continue-on-error: true
+          EOF
 
       - name: PyTorch Python Lint
         # timeout-minutes: 5
-        env:
-          PYTHON_ONLY: 1
-          TE_PATH: .
+        continue-on-error: true
         run: |
-          # Activate conda environment
+          docker exec -i \
+            -e PYTHON_ONLY=1 \
+            -e TE_PATH=. \
+            $CONTAINER_NAME bash << 'EOF'
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
 
-          # Run PyTorch lint checks
           echo "=== Running PyTorch Lint Checks ==="
           bash ./qa/L0_pytorch_lint/test.sh || true
 
@@ -148,36 +151,36 @@ jobs:
           echo "-----------------------------------------------------"
           echo "Note: Pylint check ignores errors C0411 (incorrect import position) and W0611 (unused import), which can be achieved by adding the parameter --disable=C0411,W0611"
           echo "-----------------------------------------------------"
-        continue-on-error: true
+          EOF
 
       - name: Run L0 PyTorch Debug Unit Tests
         # timeout-minutes: 10
-        env:
-          TE_PATH: .
         run: |
-          # Activate conda environment
+          docker exec -i \
+            -e TE_PATH=. \
+            $CONTAINER_NAME bash << 'EOF'
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
 
-          # Run debug unit tests
           echo "=== Running L0 PyTorch Debug Unit Tests ==="
           bash ./qa/L0_pytorch_debug_unittest/test.sh
+          EOF
 
       - name: Run L0 PyTorch Core Unit Tests
         # timeout-minutes: 10
-        env:
-          TE_PATH: .
-          TE_FL_PREFER: vendor
         run: |
-          # Activate conda environment
+          docker exec -i \
+            -e TE_PATH=. \
+            -e TE_FL_PREFER=vendor \
+            $CONTAINER_NAME bash << 'EOF'
           source /opt/miniconda3/etc/profile.d/conda.sh
           conda activate flagscale-train
-          
+
           export TE_LIB_PATH=$(python -c "import site; print(site.getsitepackages()[0])")/transformer_engine
 
-          # Run core unit tests
           echo "=== Running L0 PyTorch Core Unit Tests ==="
           bash ./qa/L0_pytorch_unittest/test.sh
+          EOF
 
       - name: Sleep before stopping container on failure
         if: failure()
@@ -185,3 +188,9 @@ jobs:
           echo "=== Workflow failed. Sleeping 48h to allow debugging before container stops ==="
           echo "Container will remain running until $(date -d '+48 hours' 2>/dev/null || date -v+48H) ..."
           sleep 172800
+
+      - name: Stop and Remove Docker Container
+        if: always()
+        run: |
+          docker stop $CONTAINER_NAME || true
+          docker rm $CONTAINER_NAME || true
