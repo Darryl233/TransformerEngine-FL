@@ -28,8 +28,6 @@ jobs:
         shell: bash
     container:
       image: harbor.baai.ac.cn/flagscale/cuda12.8.1-torch2.7.1-python3.10-te2.9:20260209
-      ports:
-        - 80:80
       options: >-
         -v /home/runner/_work/${{ github.run_id }}:${{ github.workspace }}
         --gpus all
@@ -42,13 +40,6 @@ jobs:
         --user root
         --pull always
     steps:
-      - name: Test Action
-        uses: actions/github-script@v7
-        with:
-          script: |
-            console.log('workflow:', context.workflow)
-            console.log('ref:', context.ref)
-            console.log('sha:', context.sha)
 
       - name: Configure git safe directory
         run: git config --global --add safe.directory '*'

@@ -24,8 +24,6 @@ jobs:
         shell: bash
     container:
       image: harbor.baai.ac.cn/flagscale/cuda12.8.1-torch2.7.1-python3.10-te2.9:20260209
-      ports:
-        - 80:80
       options: >-
         -v /home/runner/_work/${{ github.run_id }}:${{ github.workspace }}
         --gpus all 
