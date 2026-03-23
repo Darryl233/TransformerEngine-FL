@@ -8,6 +8,9 @@ from typing import Iterable, Optional, Tuple, Union, List
 import os
 import torch
 import transformer_engine_torch as tex
+
+from transformer_engine import te_device_type
+
 from ..constants import TE_DType
 from ..utils import get_sm_count, _empty_tensor
 
@@ -189,7 +192,8 @@ def general_grouped_gemm(
     sm_count = get_sm_count()
     if grad and use_bias:
         grad_bias = [
-            torch.empty(B[i].shape[1], dtype=out[0].dtype, device="cuda") for i in range(num_gemms)
+            torch.empty(B[i].shape[1], dtype=out[0].dtype, device=te_device_type())
+            for i in range(num_gemms)
         ]
     else:
         grad_bias = empty_tensors

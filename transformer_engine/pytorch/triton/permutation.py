@@ -13,6 +13,7 @@ import triton.language as tl
 from triton.language import core
 from triton.language.standard import _log2
 
+from transformer_engine import te_device_type
 
 # The following three argsort related kernels are adapted from
 # the issue https://github.com/triton-lang/triton/issues/3698
@@ -218,10 +219,12 @@ def make_row_id_map(
         The [num_experts, num_experts + n_routed) items are the indices of the experts corresponding
         to the first n_routed row indices above.
     """
-    row_id_map = torch.empty((num_tokens, num_experts * 2 + 1), dtype=torch.int32, device="cuda")
+    row_id_map = torch.empty(
+        (num_tokens, num_experts * 2 + 1), dtype=torch.int32, device=te_device_type()
+    )
     block_size = 1024
     grid = (num_experts, triton.cdiv(num_tokens, block_size))
-    workspace_tensor = torch.empty(grid, dtype=torch.int32, device="cuda")
+    workspace_tensor = torch.empty(grid, dtype=torch.int32, device=te_device_type())
 
     # supposing num_tokens == 5, num_experts == 3, block_size == 3
     # and we have a routing_map like this:
@@ -419,15 +422,15 @@ def permute_with_mask_map(
     scale_hidden_dim: int
         Hidden size of the scale tensor.
     """
-    output = torch.empty((num_out_tokens, hidden_size), dtype=inp.dtype, device="cuda")
+    output = torch.empty((num_out_tokens, hidden_size), dtype=inp.dtype, device=te_device_type())
     if probs is not None:
-        permuted_probs = torch.empty((num_out_tokens,), dtype=probs.dtype, device="cuda")
+        permuted_probs = torch.empty((num_out_tokens,), dtype=probs.dtype, device=te_device_type())
     else:
         permuted_probs = None
 
     if scale is not None:
         permuted_scale = torch.empty(
-            (num_out_tokens, scale_hidden_dim), dtype=scale.dtype, device="cuda"
+            (num_out_tokens, scale_hidden_dim), dtype=scale.dtype, device=te_device_type()
         )
     else:
         permuted_scale = None
@@ -603,10 +606,10 @@ def unpermute_with_mask_map(
     hidden_size: int
         Hidden size of the permuted tensor.
     """
-    output = torch.empty((num_tokens, hidden_size), dtype=inp.dtype, device="cuda")
+    output = torch.empty((num_tokens, hidden_size), dtype=inp.dtype, device=te_device_type())
     if permuted_probs is not None:
         unpermuted_probs = torch.empty(
-            (num_tokens, num_experts), dtype=permuted_probs.dtype, device="cuda"
+            (num_tokens, num_experts), dtype=permuted_probs.dtype, device=te_device_type()
         )
     else:
         unpermuted_probs = None
@@ -776,10 +779,10 @@ def unpermute_with_mask_map_bwd_with_merging_probs(
         Hidden size of the output tensor.
     """
     act_grad = torch.empty(
-        (num_out_tokens, hidden_size), dtype=fwd_output_grad.dtype, device="cuda"
+        (num_out_tokens, hidden_size), dtype=fwd_output_grad.dtype, device=te_device_type()
     )
     merging_probs_grad = torch.empty(
-        (num_tokens, num_experts), dtype=merging_probs.dtype, device="cuda"
+        (num_tokens, num_experts), dtype=merging_probs.dtype, device=te_device_type()
     )
     grid = (num_tokens,)
     _unpermute_bwd_with_merging_probs_kernel[grid](
@@ -869,7 +872,7 @@ def make_chunk_sort_map(
     num_splits: int
         Number of splits of split_sizes and sorted_indices.
     """
-    row_id_map = torch.empty((num_tokens,), dtype=torch.int32, device="cuda")
+    row_id_map = torch.empty((num_tokens,), dtype=torch.int32, device=te_device_type())
     grid = (num_tokens,)
     _make_chunk_sort_map_kernel[grid](
         split_sizes,
@@ -968,9 +971,9 @@ def sort_chunks_by_map(
     is_forward: bool
         Whether the sort is for forward or backward.
     """
-    output = torch.empty((num_tokens, hidden_size), dtype=inp.dtype, device="cuda")
+    output = torch.empty((num_tokens, hidden_size), dtype=inp.dtype, device=te_device_type())
     if probs is not None:
-        permuted_probs = torch.empty((num_tokens,), dtype=probs.dtype, device="cuda")
+        permuted_probs = torch.empty((num_tokens,), dtype=probs.dtype, device=te_device_type())
     else:
         permuted_probs = None
     # pylint: disable=unnecessary-lambda-assignment

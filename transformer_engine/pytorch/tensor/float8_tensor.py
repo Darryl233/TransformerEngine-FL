@@ -11,6 +11,7 @@ import torch
 import transformer_engine_torch as tex
 from transformer_engine_torch import DType as TE_DType
 
+from transformer_engine import te_device_type
 from transformer_engine.common.recipe import DelayedScaling, Float8CurrentScaling, Recipe
 from ..utils import canonicalize_process_group, devices_match
 from .storage.float8_tensor_storage import Float8TensorStorage, _FromFloat8Func
@@ -108,7 +109,7 @@ class Float8Quantizer(Quantizer):
 
         # Canonicalize tensor attributes
         if device is None:
-            device = torch.device("cuda")
+            device = torch.device(te_device_type())
 
         # Allocate FP8 data
         data = torch.empty(shape, dtype=torch.uint8, device=device)
@@ -294,7 +295,7 @@ class Float8CurrentScalingQuantizer(Quantizer):
 
         # Canonicalize tensor attributes
         if device is None:
-            device = torch.device("cuda")
+            device = torch.device(te_device_type())
 
         # Allocate FP8 data
         data = torch.empty(shape, dtype=torch.uint8, device=device)
@@ -682,7 +683,7 @@ class Float8Tensor(Float8TensorStorage, QuantizedTensor):
         """
 
         # Tensor device
-        new_device = tensor.device if tensor.is_cuda else self.device
+        new_device = tensor.device if tensor.device.type == te_device_type() else self.device
         if not devices_match(new_device, tensor.device):
             tensor = tensor.to(device=new_device)
 

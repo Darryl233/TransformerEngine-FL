@@ -10,6 +10,7 @@ from typing import Callable, List, Optional, Tuple, Union
 
 import torch
 
+from transformer_engine import te_device_type
 from transformer_engine.pytorch import torch_version
 from transformer_engine.pytorch.module import LayerNormMLP, LayerNorm, RMSNorm
 from transformer_engine.debug.pytorch.debug_state import TEDebugState
@@ -311,7 +312,7 @@ class TransformerLayer(torch.nn.Module):
         bias: bool = True,
         activation: str = "gelu",
         normalization: str = "LayerNorm",
-        device: Union[torch.device, str] = "cuda",
+        device: Union[torch.device, str] = te_device_type(),
         attn_input_format: str = "sbhd",
         name: str = None,
         qk_norm_type: Optional[str] = None,
