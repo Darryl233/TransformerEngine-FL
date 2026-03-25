@@ -17,6 +17,8 @@ from .impl import (
     multi_tensor_adam_param_remainder_fl,
     multi_tensor_l2_norm_fl,
     generic_gemm_fl,
+    scaled_masked_softmax_forward_fl,
+    scaled_masked_softmax_backward_fl,
 )
 
 
@@ -159,6 +161,23 @@ class FlagOSBackend(TEFLBackendBase):
 
     def get_fused_attn_backend(self, *args, **kwargs) -> int:
         return NVTE_Fused_Attn_Backend.NVTE_No_Backend
+
+    # Softmax functions
+    def scaled_masked_softmax_forward(
+        self,
+        input: torch.Tensor,
+        mask: torch.Tensor,
+        scale_factor: Union[float, torch.Tensor],
+    ) -> torch.Tensor:
+        return scaled_masked_softmax_forward_fl(input, mask, scale_factor)
+
+    def scaled_masked_softmax_backward(
+        self,
+        output_grad_: torch.Tensor,
+        softmax_results_: torch.Tensor,
+        scale_factor: float,
+    ) -> torch.Tensor:
+        return scaled_masked_softmax_backward_fl(output_grad_, softmax_results_, scale_factor)
 
     # multi-tensor functions
     def multi_tensor_scale(
