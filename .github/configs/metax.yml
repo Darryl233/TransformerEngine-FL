@@ -1,0 +1,68 @@
+# Metax Hardware Configuration for TE-FL
+# This file defines CI/CD settings for Metax-based testing
+# Test configurations are defined in tests/test_utils/config/platforms/metax.yaml
+
+hardware_name: metax
+display_name: 'Metax Tests'
+
+ci_image: localhost:5000/megatron-lm-with-te:v1
+
+runner_labels:
+  - self-hosted
+  - Linux
+  - X64
+  - metax
+  - dev
+
+container_volumes:
+  - /nfs/metax_fs:/nfs/metax_fs
+  - /dev/dri:/dev/dri
+  - /dev/mxcd:/dev/mxcd
+  - /dev/infiniband:/dev/infiniband
+
+container_options: >-
+  --uts=host
+  --ipc=host
+  --privileged=true
+  --group-add video
+  --shm-size=100gb
+  --ulimit memlock=-1
+  --security-opt seccomp=unconfined
+  --security-opt apparmor=unconfined
+  --device=/dev/dri
+  --device=/dev/mxcd
+  --device=/dev/infiniband
+  --user root
+  --ulimit nofile=65535:65535
+  -e PLATFORM=metax
+  -e TORCH_DISTRIBUTED_BACKEND=mccl
+  -e LD_LIBRARY_PATH=/opt/maca/lib:/usr/local/lib:$LD_LIBRARY_PATH
+
+build_env:
+  TE_FL_SKIP_CUDA: '1'
+  NVTE_WITH_MACA: '1'
+  CUDA_HOME: /opt/maca
+  MACA_HOME: /opt/maca
+
+# Device types to run tests on
+device_types:
+  - c500
+
+# Test matrix configuration
+test_matrix:
+  unit:
+    devices:
+      - c500
+    # Ignored test files for unit tests
+    # These files will be skipped when running pytest
+    ignored_tests:
+      # example: tests/unit_tests/test_example.py
+      # - tests/unit_tests/test_inference.py
+      # - tests/unit_tests/test_rl_utils.py
+
+  # functional:
+  #   train:
+  #     - device: c500
+  #       task: train
+  #       model: deepseek
+  #       case: tp2_pp2_ep2
