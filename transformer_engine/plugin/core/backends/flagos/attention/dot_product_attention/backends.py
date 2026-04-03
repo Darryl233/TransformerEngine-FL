@@ -9,6 +9,7 @@ import warnings
 from packaging.version import Version as PkgVersion
 
 import torch
+from transformer_engine import te_device_type
 from transformer_engine.pytorch.utils import (
     get_device_compute_capability,
 )
@@ -283,8 +284,10 @@ class FlashAttentionFL(FlashAttentionBase):
             for x in [query_layer, key_layer, value_layer]
         ), "FLAttention only supports FP16 and BF16 data types, or Float8Tensors."
         assert (
-            query_layer.is_cuda and key_layer.is_cuda and value_layer.is_cuda
-        ), "FLAttention only supports CUDA tensors."
+            query_layer.device.type == te_device_type()
+            and key_layer.device.type == te_device_type()
+            and value_layer.device.type == te_device_type()
+        ), f"FLAttention only supports {te_device_type()} tensors."
         assert qkv_layout in QKVLayouts, f"FLAttention does not support qkv_layout = {qkv_layout}!"
 
         cp_size = 1

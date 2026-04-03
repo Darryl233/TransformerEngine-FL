@@ -17,6 +17,9 @@ from .impl import (
     multi_tensor_adam_param_remainder_fl,
     multi_tensor_l2_norm_fl,
     generic_gemm_fl,
+    scaled_masked_softmax_forward_fl,
+    scaled_masked_softmax_backward_fl,
+    te_general_grouped_gemm_fl,
 )
 
 
@@ -116,6 +119,46 @@ class FlagOSBackend(TEFLBackendBase):
             beta,
         )
 
+    def te_general_grouped_gemm(
+        self,
+        A: List[Any],
+        transa: bool,
+        B: List[Any],
+        transb: bool,
+        D: Optional[List[torch.Tensor]],
+        D_type: DType,
+        m_splits: List[int],
+        bias: List[torch.Tensor],
+        bias_type: DType,
+        single_output: bool,
+        pre_gelu_out: List[torch.Tensor],
+        grad: bool,
+        workspace: List[torch.Tensor],
+        workspaceSizes: int,
+        accumulate: bool,
+        use_split_accumulator: bool,
+        math_sm_count: int,
+    ) -> Optional[List[torch.Tensor]]:
+        return te_general_grouped_gemm_fl(
+            A,
+            transa,
+            B,
+            transb,
+            D,
+            D_type,
+            m_splits,
+            bias,
+            bias_type,
+            single_output,
+            pre_gelu_out,
+            grad,
+            workspace,
+            workspaceSizes,
+            accumulate,
+            use_split_accumulator,
+            math_sm_count,
+        )
+
     # Other granular functions
     def rmsnorm_fwd(
         self,
@@ -159,6 +202,23 @@ class FlagOSBackend(TEFLBackendBase):
 
     def get_fused_attn_backend(self, *args, **kwargs) -> int:
         return NVTE_Fused_Attn_Backend.NVTE_No_Backend
+
+    # Softmax functions
+    def scaled_masked_softmax_forward(
+        self,
+        input: torch.Tensor,
+        mask: torch.Tensor,
+        scale_factor: Union[float, torch.Tensor],
+    ) -> torch.Tensor:
+        return scaled_masked_softmax_forward_fl(input, mask, scale_factor)
+
+    def scaled_masked_softmax_backward(
+        self,
+        output_grad_: torch.Tensor,
+        softmax_results_: torch.Tensor,
+        scale_factor: float,
+    ) -> torch.Tensor:
+        return scaled_masked_softmax_backward_fl(output_grad_, softmax_results_, scale_factor)
 
     # multi-tensor functions
     def multi_tensor_scale(
@@ -243,7 +303,7 @@ class FlagOSBackend(TEFLBackendBase):
         return 90000
 
     def get_num_cublas_streams(self) -> int:
-        return 0
+        return 4  # keep consistent with transformer_engine/common/util/multi_stream.cpp, get_num_compute_streams()
 
     ############## class func #################################
     def get_flash_attention_class(self):

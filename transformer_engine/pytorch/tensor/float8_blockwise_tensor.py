@@ -12,6 +12,7 @@ import transformer_engine_torch as tex
 from transformer_engine_torch import DType as TE_DType
 from transformer_engine_torch import Float8BlockScaleTensorFormat
 
+from transformer_engine import te_device_type
 from transformer_engine.common.recipe import Float8BlockScaling, Recipe
 from .storage.float8_blockwise_tensor_storage import Float8BlockwiseQTensorStorage
 from .quantized_tensor import (
@@ -220,7 +221,7 @@ class Float8BlockQuantizer(Quantizer):
     ) -> Float8BlockwiseQTensor:
         """Construct quantized tensor with uninitialized data"""
         if device is None:
-            device = torch.device("cuda")
+            device = torch.device(te_device_type())
 
         data_format = (
             tex.Float8BlockScaleTensorFormat.COMPACT
@@ -451,7 +452,7 @@ class Float8BlockwiseQTensor(Float8BlockwiseQTensorStorage, QuantizedTensor):
                 qt._rowwise_scale_inv,
                 qt._columnwise_scale_inv,
             ):
-                if t is not None and t.is_cuda:
+                if t is not None and t.device.type == te_device_type():
                     t.record_stream(stream)
             return None
 
@@ -542,7 +543,7 @@ class Float8BlockwiseQTensor(Float8BlockwiseQTensorStorage, QuantizedTensor):
 
         """
         # Tensor device
-        new_device = tensor.device if tensor.is_cuda else self.device
+        new_device = tensor.device if tensor.device.type == te_device_type() else self.device
 
         def _set_from_tensor(dst: Float8BlockwiseQTensor, src: Float8BlockwiseQTensor):
             dst._rowwise_data = src._rowwise_data

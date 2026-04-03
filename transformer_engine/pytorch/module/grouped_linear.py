@@ -11,7 +11,10 @@ import torch
 
 import transformer_engine_torch as tex
 
+from transformer_engine import te_device_type
 from transformer_engine.common.recipe import Recipe
+
+
 from .base import (
     get_multi_stream_cublas_workspace,
     TransformerEngineBaseModule,
@@ -581,7 +584,7 @@ class GroupedLinear(TransformerEngineBaseModule):
         return_bias: bool = False,
         params_dtype: Optional[torch.dtype] = None,
         parallel_mode: Optional[str] = None,
-        device: Union[torch.device, str] = "cuda",
+        device: Union[torch.device, str] = te_device_type(),
         ub_overlap_rs: bool = False,
         ub_overlap_ag: bool = False,
         ub_name: Optional[str] = None,
